@@ -1,0 +1,99 @@
+[project]
+name = "mandate-spike"
+description = ""
+authors = []
+telemetry = false
+cache_dir = "./.cache"
+
+[[project.requirements]]
+contract_id = "SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.xyk-core-v-1-2"
+
+[[project.requirements]]
+contract_id = "SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.xyk-pool-trait-v-1-2"
+
+[[project.requirements]]
+contract_id = "SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard"
+
+[[project.requirements]]
+contract_id = "SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.sip-010-trait-ft-standard-v-1-1"
+
+[[project.requirements]]
+contract_id = "SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.xyk-pool-sbtc-stx-v-1-1"
+
+[[project.requirements]]
+contract_id = "SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token"
+
+[[project.requirements]]
+contract_id = "SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2"
+
+[[project.requirements]]
+contract_id = "SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc"
+
+[[project.requirements]]
+contract_id = "SPSX722NK9V3A8D3CVQT0CDY4EBQ3E9FSDDE61FT.borrower-v1"
+
+[[project.requirements]]
+contract_id = "SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-stx"
+
+[[project.requirements]]
+contract_id = "SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.wstx"
+
+# [contracts.counter]
+# path = "contracts/counter.clar"
+# epoch = "latest"
+
+# Check-checker settings:
+# trusted_sender: if true, inputs are trusted after tx_sender has been checked.
+# trusted_caller: if true, inputs are trusted after contract-caller has been checked.
+# callee_filter: if true, untrusted data may be passed into a private function without a
+# warning, if it gets checked inside. This check will also propagate up to the
+# caller.
+# More informations: https://www.hiro.so/blog/new-safety-checks-in-clarinet
+
+[repl.analysis]
+passes = []
+check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
+
+[contracts.mandate-vault]
+path = "contracts/mandate-vault.clar"
+epoch = "latest"
+clarity_version = 3
+
+[contracts.mandate-vault-v2]
+path = "contracts/mandate-vault-v2.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.c4probe]
+path = "contracts/c4probe.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.mock-token]
+path = "contracts/mock-token.clar"
+epoch = "latest"
+clarity_version = 3
+
+[contracts.zest-probe]
+path = "contracts/zest-probe.clar"
+epoch = "latest"
+clarity_version = 3
+
+[contracts.granite-probe]
+path = "contracts/granite-probe.clar"
+epoch = "latest"
+clarity_version = 3
+
+[contracts.mandate-probe-mainnet]
+path = "contracts/mandate-probe-mainnet.clar"
+epoch = "latest"
+clarity_version = 3
+
+[contracts.multi-asset-probe]
+path = "contracts/multi-asset-probe.clar"
+epoch = "latest"
+clarity_version = 3
+
+[repl.remote_data]
+enabled = true
+api_url = "https://api.hiro.so"

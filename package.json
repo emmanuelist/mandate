@@ -1,0 +1,17 @@
+{
+  "name": "mandate-spike-tests",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@stacks/clarinet-sdk": "^3.9.0",
+    "@stacks/transactions": "^7.2.0",
+    "@stacks/wallet-sdk": "^7.6.0",
+    "@types/node": "^24.4.0",
+    "vitest": "^4.1.8",
+    "vitest-environment-clarinet": "^3.0.0"
+  }
+}

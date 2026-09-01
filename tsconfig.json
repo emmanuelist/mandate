@@ -1,0 +1,1 @@
+{"compilerOptions":{"target":"ESNext","module":"ESNext","moduleResolution":"Bundler","strict":false,"skipLibCheck":true,"types":["@stacks/clarinet-sdk/vitest"]}}

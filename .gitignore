@@ -1,0 +1,19 @@
+# Secrets — never commit
+**/settings/Mainnet.toml
+**/settings/Testnet.toml
+
+# Private working documents, not for a public repository
+APPLICATION-DRAFT.md
+BITFLOW-OUTREACH.md
+DEEPSTACK-OUTREACH.md
+
+# Build and tooling
+node_modules/
+.cache/
+coverage/
+costs-reports.json
+history.txt
+
+# Local scratch
+*.log
+deployments/*.bak
