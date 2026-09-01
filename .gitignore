@@ -17,3 +17,4 @@ history.txt
 # Local scratch
 *.log
 deployments/*.bak
+deployments/*.simnet-plan.yaml
