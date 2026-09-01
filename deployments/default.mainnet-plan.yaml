@@ -1,0 +1,21 @@
+id: 0
+name: Mainnet deployment
+network: mainnet
+stacks-node: https://api.hiro.so
+bitcoin-node: http://blockstack:blockstacksystem@bitcoin.blockstack.com:8332
+plan:
+  batches:
+  - id: 0
+    transactions:
+    # ONLY the probe. The generated plan included all seven project contracts --
+    # the buggy original spike, a token with an open mint, and a probe with no
+    # exit. Those must never reach mainnet. Regenerating will re-add them, so
+    # apply with --use-on-disk-deployment-plan.
+    - transaction-type: contract-publish
+      contract-name: mandate-probe-mainnet
+      expected-sender: SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH
+      cost: 393381
+      path: contracts/mandate-probe-mainnet.clar
+      anchor-block-only: true
+      clarity-version: 3
+    epoch: '4.0'
