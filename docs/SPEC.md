@@ -30,10 +30,10 @@ One contract holds every owner's funds, with separate books per owner.
 |---|---|---|
 | `max-notional` | the largest single allocation, in asset units | 0 allows no allocation |
 | `expires` | a Bitcoin block height; calls at or after it are refused | a past height makes the mandate inert |
-| `max-slip-bps` | the largest shortfall against the venue's quote in one move, in basis points | 10,000 sets the floor to zero; above 10,000, `allocate` aborts with a runtime error instead of a clean refusal (#16) |
-| `max-trades-per-window`, `window-len` | at most that many allocations and unwinds per window of `window-len` Bitcoin blocks | `window-len` 0 switches the rate limit off: every call starts a fresh window (#16) |
+| `max-slip-bps` | the largest shortfall against the venue's quote in one move, in basis points | 10,000 sets the floor to zero; above 10,000 is refused by `grant` (`u116`) |
+| `max-trades-per-window`, `window-len` | at most that many allocations and unwinds per window of `window-len` Bitcoin blocks | `window-len` 0 would restart the window on every call, so `grant` refuses it (`u116`) |
 | `max-daily-notional` | total allocated per day of 144 Bitcoin blocks; unwinds don't count | 0 allows no allocation |
-| `max-cum-slip-bps` | the summed shortfall across moves, adding each move's basis points regardless of its size | 0 allows only fills at the quote |
+| `max-cum-slip-bps` | the summed shortfall across moves, adding each move's basis points regardless of its size | 0 allows only fills at the quote; above 10,000 is refused by `grant` (`u116`) |
 
 Windows and days roll forward on the first call after they lapse. **`grant` resets every counter**, including the cumulative slippage, so re-granting gives a delegate a fresh budget.
 
@@ -45,7 +45,7 @@ Windows and days roll forward on the first call after they lapse. **`grant` rese
 |---|---|---|---|
 | `allow-asset`, `disallow-asset`, `allow-venue`, `disallow-venue` | anyone | no | edits the caller's own lists only |
 | `deposit (token amount)` | owner | no | asset must be on the caller's list (`u106`); credits the caller |
-| `grant (delegate ...)` | owner | no | refuses the vault itself as a delegate (`u115`); resets counters |
+| `grant (delegate ...)` | owner | no | refuses the vault itself as a delegate (`u115`) and parameters that would switch a limit off or abort later (`u116`); resets counters |
 | `revoke (delegate)` | owner | no | deletes the mandate |
 | `withdraw (token amount)` | owner | no | pays the caller from the caller's idle balance (`u105`) |
 | `allocate (owner venue asset amount)` | delegate | yes | moves idle assets into a venue |
@@ -99,6 +99,7 @@ Both then exit the position the same way: the position must exist and hold the a
 | `u113` | no such position, or more shares than it holds |
 | `u114` | the venue's report doesn't match what the vault measured |
 | `u115` | the vault can't be its own delegate |
+| `u116` | a mandate parameter would switch a limit off or abort later |
 
 A venue's own errors pass through unchanged, such as a venue refusing a deposit below its minimum.
 
@@ -170,6 +171,16 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 | Any of group A against Zest's real sBTC vault | the same checks, which run before the venue is called | "policy refusals hold with Zest as the venue, and nothing leaves the vault" (v3-zest-fork.test.ts) |
 | Using Zest when the owner hasn't listed it, or listed it for another asset, or acting without a mandate | `u107`, `u107`, `u100` | "refuses Zest unless the owner allowlisted it, for sBTC" (v3-zest-fork.test.ts) |
 
+**F. Bad mandate parameters**
+
+| Attack or failure | Stopped by | Test |
+|---|---|---|
+| A zero-length window that restarts on every call, switching the rate limit off | `grant`, `u116` | "grant refuses a zero-length rate window, which would switch the rate limit off" (v3.test.ts) |
+| Per-move slippage above 100%, which would make the floor negative and abort `allocate` | `grant`, `u116` | "grant refuses per-move slippage above 100%" (v3.test.ts) |
+| A slippage budget above 100% | `grant`, `u116` | "grant refuses a slippage budget above 100%" (v3.test.ts) |
+| A refused grant overwriting a working mandate | the checks run before anything is written | "a refused grant leaves the existing mandate in force" (v3.test.ts) |
+| The guards refusing valid edge values | a one-block window and 100% slippage are accepted | "grant accepts the boundaries: a one-block window and 100% slippage" (v3.test.ts) |
+
 ### Residual risks: not stopped by the contract
 
 - **A venue that pauses, loses funds or fails.** The owner bears venue risk, and a paused venue blocks unwinding until it resumes.
@@ -177,7 +188,6 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 - **An owner's own choices:** listing a hostile venue, or granting wide limits.
 - **A compromised owner key**, which controls that owner's books entirely.
 - **Churn within the limits.** The rate window, daily cap and cumulative budget bound it; they don't prevent it.
-- **Parameter edges until #16:** `window-len` 0 switches the rate limit off, and `max-slip-bps` above 10,000 aborts `allocate`.
 - **Rounding at venues.** A 100,000-sat round trip through Zest returns 99,999 (E-011).
 - **Clock drift.** Windows and days count Bitcoin blocks, so their length in hours varies.
 
