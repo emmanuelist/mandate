@@ -189,6 +189,30 @@ describe("v3 keeps v2's fixes, ported to the new entry points", () => {
   });
 });
 
+describe("v3 grant parameters", () => {
+  const raw = (win: number, slip: number, cum: number) =>
+    simnet.callPublicFn(V, "grant", [Cl.principal(agentX), Cl.uint(500_000), Cl.uint(9_999_999),
+      Cl.uint(slip), Cl.uint(100), Cl.uint(win), Cl.uint(10_000_000), Cl.uint(cum)], alice);
+  it("grant refuses a zero-length rate window, which would switch the rate limit off", () => {
+    expect(raw(0, 100, 10_000).result).toBeErr(Cl.uint(116));        // ERR_PARAMS
+  });
+  it("grant refuses per-move slippage above 100%", () => {
+    expect(raw(144, 10_001, 10_000).result).toBeErr(Cl.uint(116));
+  });
+  it("grant refuses a slippage budget above 100%", () => {
+    expect(raw(144, 100, 10_001).result).toBeErr(Cl.uint(116));
+  });
+  it("grant accepts the boundaries: a one-block window and 100% slippage", () => {
+    expect(raw(1, 10_000, 10_000).result).toBeOk(Cl.bool(true));
+  });
+  it("a refused grant leaves the existing mandate in force", () => {
+    setup(); grant(alice, agentX, { cap: 1_000 });
+    expect(raw(0, 100, 10_000).result).toBeErr(Cl.uint(116));
+    expect(allocate(alice, 1_000).result).toBeOk(Cl.uint(1_000));    // the old cap still applies
+    expect(allocate(alice, 1_001).result).toBeErr(Cl.uint(102));
+  });
+});
+
 describe("v3 positions", () => {
   it("a position keeps the asset it was opened with", () => {
     setup(); grant(alice, agentX);

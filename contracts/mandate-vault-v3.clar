@@ -38,6 +38,7 @@
 (define-constant ERR_POSITION    (err u113))
 (define-constant ERR_MISREPORT   (err u114))
 (define-constant ERR_AGENT       (err u115))
+(define-constant ERR_PARAMS      (err u116))
 
 (define-map mandates
   { owner: principal, agent: principal }
@@ -106,6 +107,11 @@
     ;; the vault can't be its own delegate: a venue calling back mid-call runs
     ;; as the vault, so a mandate held by the vault would let that venue act
     (asserts! (not (is-eq agent (try! (as-contract? () tx-sender)))) ERR_AGENT)
+    ;; refuse parameters that would switch a limit off (a zero-length window
+    ;; restarts on every call) or abort later (a floor computed below zero)
+    (asserts! (> window-len u0) ERR_PARAMS)
+    (asserts! (<= max-slip-bps BPS) ERR_PARAMS)
+    (asserts! (<= max-cum-slip-bps BPS) ERR_PARAMS)
     (map-set mandates { owner: tx-sender, agent: agent }
       { max-notional: max-notional, expires: expires, max-slip-bps: max-slip-bps,
         max-trades-per-window: max-trades-per-window, window-len: window-len,
