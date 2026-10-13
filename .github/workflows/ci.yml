@@ -64,12 +64,6 @@ jobs:
           node-version: 26
           cache: npm
       - run: npm ci
-      # The forks are pinned to fixed heights (D-012), so the SDK's fork data
-      # never changes for a given pair of manifests and can be reused.
-      - uses: actions/cache@v6
-        with:
-          path: .cache
-          key: fork-data-${{ hashFiles('Clarinet.toml', 'Clarinet-jing.toml') }}
       - name: full suite (fork pinned at block 9194000)
         run: npx vitest run
       - name: Jing suite (fork pinned at block 9036500)
