@@ -30,8 +30,8 @@ ERR-SLIPPAGE (u801010). 100 sats is the suggested default: unambiguous, and abou
 eleven cents.
 
 
-Goal: turn "proven against forked state" into four mainnet transaction hashes you can
-link from the grant application.
+Goal: turn "proven against forked state" into four mainnet transaction hashes anyone
+can verify on a public explorer.
 
 Deploying `mandate-probe-mainnet.clar` only. Not the full vault — this proves the one
 claim forked state cannot: that a real broadcast works.
