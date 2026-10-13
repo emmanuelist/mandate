@@ -74,3 +74,9 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Alternatives:** retrying failed runs, which hides real failures; one file at a time, slower and untested; staying at the tip, where the panic is inside the SDK and can't be fixed from this repo.
 **Consequences:** results are reproducible at a known block. A venue change after the pinned block isn't seen until the height is bumped, which is a deliberate commit, and the first CI run after a bump fetches from scratch.
 **Evidence:** E-013.
+
+## D-013 · CI doesn't cache fork data · 2026-10-13 · supersedes D-012's caching
+**Context:** with `main`'s cached fork data restored, #17's CI failed the same two tests twice, with runtime type errors inside forked Zest and Bitflow contracts. Every run that started without the cache passed.
+**Decision:** CI fetches the fork data fresh on every run. The forks stay pinned and the run keeps two workers, as D-012 set.
+**Alternatives:** keep the cache and find out how it goes bad, which is open-ended; key it more narrowly, which wouldn't touch whatever corrupts it.
+**Consequences:** every run fetches the pinned blocks' data from Hiro, taking about six minutes, and the SDK's retries absorb the rate limits that brings (E-013).
