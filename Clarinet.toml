@@ -108,3 +108,12 @@ path = "contracts/venue-spike.clar"
 epoch = "latest"
 clarity_version = 4
 
+[contracts.mock-venue]
+path = "contracts/mock-venue.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.mandate-vault-v3]
+path = "contracts/mandate-vault-v3.clar"
+epoch = "latest"
+clarity_version = 4
