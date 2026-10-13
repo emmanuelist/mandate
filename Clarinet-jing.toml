@@ -1,0 +1,27 @@
+# Separate manifest so the Jing fork can pin a historical block without
+# touching the main fork tests. Run: npx vitest run --config vitest.jing.config.ts
+[project]
+name = "mandate-jing-fork"
+description = "Contract-as-maker test against Jing markets-sbtc-stx-jing-v6-2"
+authors = []
+telemetry = false
+cache_dir = "./.cache"
+
+[[project.requirements]]
+contract_id = "SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard"
+
+[[project.requirements]]
+contract_id = "SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token"
+
+[[project.requirements]]
+contract_id = "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6-2"
+
+[contracts.jing-probe]
+path = "contracts/jing-probe.clar"
+epoch = "latest"
+clarity_version = 4
+
+[repl.remote_data]
+enabled = true
+api_url = "https://api.hiro.so"
+initial_height = 9036500
