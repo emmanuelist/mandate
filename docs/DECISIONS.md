@@ -75,8 +75,8 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Consequences:** results are reproducible at a known block. A venue change after the pinned block isn't seen until the height is bumped, which is a deliberate commit, and the first CI run after a bump fetches from scratch.
 **Evidence:** E-013.
 
-## D-013 · CI doesn't cache fork data · 2026-10-13 · supersedes D-012's caching
-**Context:** with `main`'s cached fork data restored, #17's CI failed the same two tests twice, with runtime type errors inside forked Zest and Bitflow contracts. Every run that started without the cache passed.
-**Decision:** CI fetches the fork data fresh on every run. The forks stay pinned and the run keeps two workers, as D-012 set.
-**Alternatives:** keep the cache and find out how it goes bad, which is open-ended; key it more narrowly, which wouldn't touch whatever corrupts it.
-**Consequences:** every run fetches the pinned blocks' data from Hiro, taking about six minutes, and the SDK's retries absorb the rate limits that brings (E-013).
+## D-013 · CI doesn't cache fork data, and retries the fork suites up to three times · 2026-10-13 · supersedes D-012's caching
+**Context:** after D-012, CI still failed three times on code it didn't touch. With `main`'s cached fork data restored, #17 failed the same two tests twice, with runtime type errors inside forked Zest and Bitflow contracts. Without the cache, #19 failed when two workers couldn't start, four seconds after a burst of rate-limit waits; that run hit Hiro's rate limit 13 times. Locally, with two workers, the suite has passed. The SDK retries most rate-limited requests but evidently not every path, and it has no setting for an API key.
+**Decision:** CI fetches fork data fresh on every run, and runs each fork suite up to three times, stopping at the first pass. The forks stay pinned and the run keeps two workers.
+**Alternatives:** keep the cache, which saves requests but was present when a run read wrong data, a worse failure than a worker that can't start; one worker at a time, which lowers the load but doesn't remove the rate limit and roughly doubles the run; an API key, which the SDK can't send.
+**Consequences:** the forks are pinned and the suite has no randomness, so a real failure fails all three attempts, while a rate-limit failure usually doesn't. A bad day costs up to three runs, so the job's limit is 45 minutes. Each failed attempt leaves a warning in the log.
