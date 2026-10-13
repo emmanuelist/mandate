@@ -7,7 +7,6 @@ export default defineConfig({
     testTimeout: 300000,
     hookTimeout: 300000,
     pool: "forks",
-    poolOptions: { forks: { singleFork: true } },
     setupFiles: [vitestSetupFilePath],
     environmentOptions: { clarinet: { ...getClarinetVitestsArgv() } },
   },
