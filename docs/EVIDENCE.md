@@ -13,6 +13,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-008 | 2026-10-13 | CI passes on GitHub's runners: the identity check passes on the pull request's 5 commits, and on a mainnet fork the full suite (30 tests, 13 files) and the Jing suite (1 test) pass. Hiro rate-limited the run 11 times and the SDK's retries absorbed it | [CI run](https://github.com/emmanuelist/mandate/actions/runs/38457131065): commit identity 7 s; tests 4 m 41 s (full suite 249 s, Jing 15 s) | `c519429` |
 | E-009 | 2026-10-13 | A contract reaches Zest's `v0-vault-sbtc` through Mandate's own venue trait, which Zest never declares: quote, deposit and redeem on a mainnet fork, with the contract as Zest's account and no adapter in between | `tests/venue-spike.test.ts` (output below) | `1d390ce` |
 | E-010 | 2026-10-13 | `mandate-vault-v3` allocates and unwinds through the venue trait with every v2 limit and fix: 23 tests pass against a deterministic venue, and the full suite passes with 54 tests across 15 files | `npx vitest run tests/v3.test.ts`; `npx vitest run` (output below) | `1100249` |
+| E-011 | 2026-10-13 | `mandate-vault-v3` works against Zest's real `v0-vault-sbtc` on a mainnet fork, with no adapter: 100,000 sats allocate for 99,937 shares, exactly Zest's quote, with every share held by the vault; unwinding returns 99,999 sats, exactly the quote; the owner's wallet ends 1 sat down from share rounding and the vault ends empty. A zero-slippage mandate allocates; the owner exits with no mandate after revoking and after expiry; every refusal holds with nothing leaving the vault. Full suite: 60 tests across 16 files | `tests/v3-zest-fork.test.ts`; `npx vitest run` (output below) | `f7bc6f0` |
 
 ### E-001 output
 ~~~text
@@ -120,4 +121,25 @@ $ npx vitest run tests/v3.test.ts
 $ npx vitest run
  Test Files  15 passed (15)
       Tests  54 passed (54)
+~~~
+
+### E-011 output
+~~~text
+$ npx vitest run tests/v3-zest-fork.test.ts
+  deposit 100000 sats      : idle 100000 | vault sBTC 100000
+  delegate allocates       : (ok u99937) | quote 99937 | vault holds 99937 Zest shares | delegate holds 0 | vault sBTC 0
+  delegate unwinds         : (ok u99999) | quote 99999 | idle 99999 | vault sBTC 99999 | vault Zest shares 0
+  owner withdraws          : (ok true) | wallet change -1 sats | left in vault 0
+  allocate with 0 bps slippage: (ok u99937)
+  after revoke: delegate (err u100) | owner exits (ok u99999) | withdraw (ok true)
+  per-move cap : (err u102) | vault sBTC 100000 | vault Zest shares 0
+  expired      : (err u103) | vault sBTC 100000 | vault Zest shares 0
+  rate window  : (err u110) | vault sBTC 100000 | vault Zest shares 0
+  daily cap    : (err u111) | vault sBTC 100000 | vault Zest shares 0
+  more than idle: (err u105) | vault sBTC 100000 | vault Zest shares 0
+      Tests  6 passed (6)
+
+$ npx vitest run
+ Test Files  16 passed (16)
+      Tests  60 passed (60)
 ~~~

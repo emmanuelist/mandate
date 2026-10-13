@@ -30,6 +30,7 @@ Verified facts about what Mandate depends on, each with how and when it was chec
 
 ## Traps
 - **Zest takes funds from `contract-caller`.** Both `deposit` (line 765) and `redeem` (line 799) of `v0-vault-sbtc` bind `account` to `contract-caller`. A contract placed between the vault and Zest is Zest's account for that call: it pays, and it holds the funds for an instant (#5, #6). Deployed source, 2026-10-13.
+- **Zest fills exactly at its quote within a call:** `deposit` returns what `convert-to-shares` quoted and `redeem` what `convert-to-assets` quoted, so a zero-slippage mandate works on Zest. A 100,000-sat round trip returns 99,999: share rounding, not a fee. E-011.
 - **Zest's smallest deposit.** 1 sat rounds to zero shares and fails with `(err u801010)`; 10 sats works. `tests/minimum.test.ts`, 2026-10-13.
 - **Bitflow's guard sits one contract below the core.** The core contracts have no `is-standard` check on trader paths; the pools do (E-003). Reading the core alone suggests contracts are fine.
 - **Granite's lending pool lends USDCx.** Posting sBTC to Granite is collateral for borrowing, a different action from lending. State-v1 balances, September 2026.
