@@ -1,5 +1,5 @@
 # State
-_Last verified: 2026-10-13 at `c4cc7b9`_
+_Last verified: 2026-10-13 at `4401a8c`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M1 · Core Vault + Zest Adapter on Testnet (due 2026-10-31, 18 days left)
@@ -13,7 +13,7 @@ _Last verified: 2026-10-13 at `c4cc7b9`_
 | v3 measures every venue call and refuses a hostile venue's attacks with nothing moved | 7 hostile-venue tests | E-012 |
 | v3 against Zest's real sBTC vault, with no adapter: allocate, unwind, owner exit, every refusal | fork test; ledger and real balances agree to the sat | E-011 |
 | The venue trait reaches Zest with no adapter | spike on a mainnet fork | E-009 |
-| Full suite | `npx vitest run`: 68 of 68 tests across 17 files | E-012 |
+| Full suite, forking the pinned block 9,194,000 with two workers | `npx vitest run`: 68 of 68 tests across 17 files | E-013 |
 | A contract can deposit sBTC into Zest and redeem it | the five probe transactions re-read from the mainnet API; fork tests | E-002, E-004 |
 | Granite accepts a contract's sBTC as collateral | fork test | E-005 |
 | Jing accepts a contract as maker: deposit and cancel | fork test pinned at block 9,036,500 | E-006 |

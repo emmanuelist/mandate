@@ -4,7 +4,7 @@ Verified facts about what Mandate depends on, each with how and when it was chec
 ## Networks
 | Network | API | Explorer | Notes | Verified |
 |---|---|---|---|---|
-| Stacks mainnet | https://api.hiro.so | https://explorer.hiro.so | Every test forks it through `[repl.remote_data]` in `Clarinet.toml` | 2026-10-13 |
+| Stacks mainnet | https://api.hiro.so | https://explorer.hiro.so | Every test forks it through `[repl.remote_data]`, at the block pinned by `initial_height` | 2026-10-13 |
 | Stacks testnet | https://api.testnet.hiro.so | https://explorer.hiro.so/?chain=testnet | Reset on 2026-08-05 (block 1's time), so nothing deployed earlier survives. No canonical sBTC and no Zest (see Traps) | 2026-10-13, `/extended/v2/blocks/1` |
 
 ## Contracts we call (mainnet)
@@ -43,8 +43,11 @@ Verified facts about what Mandate depends on, each with how and when it was chec
 - **An exceeded `as-contract?` allowance fails the call with `(err u<n>)`**, where n is the violated allowance's position in the list, so the vault's single allowance gives `(err u0)`. E-012.
 - **Clarity doesn't block re-entrancy.** A venue can call back into the vault mid-call. The call runs as the vault (inside its `as-contract?`, `tx-sender` is the vault), which owns no balances, positions or mandates, so it fails: `(err u105)` from `withdraw`. E-012, D-011.
 - **`as-contract?`'s body can't end in a response.** Put `try!` inside the body. `contracts/c4probe.clar`.
-- **Vitest 4 ignores `poolOptions`**, so test files run in parallel workers, each booting its own fork. On 2026-10-13 the first CI attempt at `531e2c4` failed before any test ran ("Failed to start forks worker" for all 17 files within ten seconds); a re-run passed, 68 of 68. If it recurs, set `fileParallelism: false` to run one file at a time, at a cost in CI time (#14).
-- **Fork tests run at the chain tip**, except the Jing suite, so changes in mainnet state can move results.
+- **Forking at the tip crashes the SDK now and then.** The SDK reads the tip height, then asks Hiro for that block; a lagging API node answers 404 "Block not found", and the SDK panics instead of retrying (`remote_data/mod.rs:281`, a `Result::unwrap()`), killing the worker. Seen in CI on 2026-10-13. The forks are pinned to settled blocks instead (D-012).
+- **Many workers at once: some fail to start.** With Vitest's default worker count, 3 of 17 files failed to start at the pinned block (local, 2026-10-13); each passed alone, and the full suite passed with two workers (E-013). The cause is inferred, not proven: every worker boots its own fork from Hiro at the same moment.
+- **Vitest 4 ignores `poolOptions`**, so `singleFork` never took effect; the worker count is the top-level `maxWorkers`.
+- **The SDK caches fork data in `.cache/datastore`**, one entry per contract, key and block, so a pinned block reuses it across runs. CI caches `.cache`, keyed on the two manifests (D-012).
+- **Fork tests run at pinned blocks:** the main suite at 9,194,000 (2026-10-13 06:41 UTC) and the Jing suite at 9,036,500. A mainnet change after those blocks doesn't show until the height is bumped on purpose (D-012).
 - **Hiro rate limits.** The SDK waits 40 to 55 s and retries when rate-limited. On 2026-10-13 a local full run was limited 11 times and passed in 117 s; on GitHub's runners, 11 times and 249 s (E-008). No API key is needed for the suite to pass.
 
 ## Environment

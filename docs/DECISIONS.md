@@ -67,3 +67,10 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Alternatives:** trusting the venue's return values, which lets a buggy venue inflate a position; forbidding callbacks, which Clarity has no guard for. The vault's own identity is the protection.
 **Consequences:** each allocate and unwind makes four extra reads. A venue still answers for its own share ledger, so the per-owner allowlist stays the trust anchor.
 **Evidence:** E-012.
+
+## D-012 · Fork tests run at a pinned block, two workers at a time, with the fork data cached in CI · 2026-10-13 · accepted
+**Context:** CI failed twice on 2026-10-13 for reasons unrelated to the code. At the tip, a lagging Hiro node answered "Block not found" and the Clarinet SDK panicked; and with many workers at once, some failed to start (`docs/CONTEXT.md`). Forking the tip also lets results drift with mainnet from one run to the next.
+**Decision:** the main suite forks block 9,194,000 (`initial_height` in `Clarinet.toml`), as the Jing suite already forks 9,036,500. At most two workers run at once. CI caches `.cache`, keyed on both manifests, so a pinned block's fork data is fetched once.
+**Alternatives:** retrying failed runs, which hides real failures; one file at a time, slower and untested; staying at the tip, where the panic is inside the SDK and can't be fixed from this repo.
+**Consequences:** results are reproducible at a known block. A venue change after the pinned block isn't seen until the height is bumped, which is a deliberate commit, and the first CI run after a bump fetches from scratch.
+**Evidence:** E-013.

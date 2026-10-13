@@ -15,6 +15,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-010 | 2026-10-13 | `mandate-vault-v3` allocates and unwinds through the venue trait with every v2 limit and fix: 23 tests pass against a deterministic venue, and the full suite passes with 54 tests across 15 files | `npx vitest run tests/v3.test.ts`; `npx vitest run` (output below) | `1100249` |
 | E-011 | 2026-10-13 | `mandate-vault-v3` works against Zest's real `v0-vault-sbtc` on a mainnet fork, with no adapter: 100,000 sats allocate for 99,937 shares, exactly Zest's quote, with every share held by the vault; unwinding returns 99,999 sats, exactly the quote; the owner's wallet ends 1 sat down from share rounding and the vault ends empty. A zero-slippage mandate allocates; the owner exits with no mandate after revoking and after expiry; every refusal holds with nothing leaving the vault. Full suite: 60 tests across 16 files | `tests/v3-zest-fork.test.ts`; `npx vitest run` (output below) | `f7bc6f0` |
 | E-012 | 2026-10-13 | Against a hostile venue every attack is refused with nothing moved: taking more than the move fails at the allowance (`err u0`); reporting more shares than it mints, and paying less than it reports on redeem, fail with `u114` for the delegate and the owner; calling back into the vault mid-call runs as the vault and fails (`u105`); burning more shares than asked fails at the allowance, and another owner's shares are untouched; granting the vault as its own delegate fails (`u115`). With measurement in place, real Zest still gives E-011's numbers. Full suite: 68 tests across 17 files | `tests/v3-hostile.test.ts`, `tests/v3-zest-fork.test.ts`; `npx vitest run` (output below) | `c4cc7b9` |
+| E-013 | 2026-10-13 | At the pinned block 9,194,000 with two workers, the full suite passes: 68 tests across 17 files in 454 s locally, with no worker failures. With the default worker count, 3 files failed to start, and each passed alone. CI's earlier failure was the SDK panicking on a 404 "Block not found" while forking the tip | `npx vitest run --maxWorkers=2` (now the config's setting); [CI run 38473841834](https://github.com/emmanuelist/mandate/actions/runs/38473841834) (output below) | `4401a8c` |
 
 ### E-001 output
 ~~~text
@@ -162,6 +163,27 @@ $ npx vitest run tests/v3-zest-fork.test.ts
       Tests  6 passed (6)
 
 $ npx vitest run
+ Test Files  17 passed (17)
+      Tests  68 passed (68)
+~~~
+
+### E-013 output
+~~~text
+# CI, forking the tip, run 38473841834:
+panicked at components/clarity-repl/src/repl/remote_data/mod.rs:281:32:
+called `Result::unwrap()` on an `Err` value: "http error - status: 404 - message: {\"statusCode\":404,\"error\":\"Not Found\",\"message\":\"Block not found\"}"
+
+# local, pinned at 9194000, default worker count:
+ Test Files  14 passed (14)
+      Tests  64 passed (64)
+Error: [vitest-pool]: Failed to start forks worker for test files tests/mainnet-fork.test.ts.
+Error: [vitest-pool]: Failed to start forks worker for test files tests/minimum.test.ts.
+Error: [vitest-pool]: Failed to start forks worker for test files tests/granite-fork.test.ts.
+
+# the same three, alone: granite-fork 1 passed, minimum 1 passed, mainnet-fork 2 passed
+
+# local, pinned at 9194000, two workers:
+$ npx vitest run --maxWorkers=2
  Test Files  17 passed (17)
       Tests  68 passed (68)
 ~~~
