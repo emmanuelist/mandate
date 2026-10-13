@@ -2,10 +2,8 @@
 **/settings/Mainnet.toml
 **/settings/Testnet.toml
 
-# Private working documents, not for a public repository
-APPLICATION-DRAFT.md
-BITFLOW-OUTREACH.md
-DEEPSTACK-OUTREACH.md
+# Private working notes stay out of the public record
+internal/
 
 # Build and tooling
 node_modules/
