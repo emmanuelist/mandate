@@ -16,6 +16,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-011 | 2026-10-13 | `mandate-vault-v3` works against Zest's real `v0-vault-sbtc` on a mainnet fork, with no adapter: 100,000 sats allocate for 99,937 shares, exactly Zest's quote, with every share held by the vault; unwinding returns 99,999 sats, exactly the quote; the owner's wallet ends 1 sat down from share rounding and the vault ends empty. A zero-slippage mandate allocates; the owner exits with no mandate after revoking and after expiry; every refusal holds with nothing leaving the vault. Full suite: 60 tests across 16 files | `tests/v3-zest-fork.test.ts`; `npx vitest run` (output below) | `f7bc6f0` |
 | E-012 | 2026-10-13 | Against a hostile venue every attack is refused with nothing moved: taking more than the move fails at the allowance (`err u0`); reporting more shares than it mints, and paying less than it reports on redeem, fail with `u114` for the delegate and the owner; calling back into the vault mid-call runs as the vault and fails (`u105`); burning more shares than asked fails at the allowance, and another owner's shares are untouched; granting the vault as its own delegate fails (`u115`). With measurement in place, real Zest still gives E-011's numbers. Full suite: 68 tests across 17 files | `tests/v3-hostile.test.ts`, `tests/v3-zest-fork.test.ts`; `npx vitest run` (output below) | `c4cc7b9` |
 | E-013 | 2026-10-13 | At the pinned block 9,194,000 with two workers, the full suite passes: 68 tests across 17 files in 454 s locally, with no worker failures. With the default worker count, 3 files failed to start, and each passed alone. CI's earlier failure was the SDK panicking on a 404 "Block not found" while forking the tip | `npx vitest run --maxWorkers=2` (now the config's setting); [CI run 38473841834](https://github.com/emmanuelist/mandate/actions/runs/38473841834) (output below) | `4401a8c` |
+| E-014 | 2026-10-13 | `docs/SPEC.md` names all 37 tests in the v3 suites, each beside the attack it shows refused or as a lifecycle test, and a check fails if one goes missing. The parameter edges it states were checked in the simulator: `window-len` 0 lets three allocations through a one-trade window, `max-slip-bps` 10,001 aborts `allocate`, and re-granting resets an exhausted slippage budget | `node scripts/spec-crosscheck.mjs`; a simulator probe (output below) | `2dfc165` |
 
 ### E-001 output
 ~~~text
@@ -186,4 +187,20 @@ Error: [vitest-pool]: Failed to start forks worker for test files tests/granite-
 $ npx vitest run --maxWorkers=2
  Test Files  17 passed (17)
       Tests  68 passed (68)
+~~~
+
+### E-014 output
+~~~text
+$ node scripts/spec-crosscheck.mjs
+docs/SPEC.md names all 37 tests in the v3 suites.
+
+# with one test's name removed from the spec:
+docs/SPEC.md is missing 1 of 37 tests:
+  tests/v3-hostile.test.ts: reports more shares than it mints: refused
+
+# simulator probe of grant's parameter edges, mock venue:
+window-len 0, 1 trade allowed: 1st (ok u1000) 2nd (ok u1000) 3rd (ok u1000)
+window-len 144, 1 trade allowed: 1st (ok u1000) 2nd (err u110)
+max-slip-bps 10001: threw: Call contract function error: mandate-vault-v3::allocate(...)
+cum budget 100, 0.6% fills: 1st (ok u994) 2nd (err u112) | re-grant | next (ok u994)
 ~~~

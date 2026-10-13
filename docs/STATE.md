@@ -1,10 +1,10 @@
 # State
-_Last verified: 2026-10-13 at `4401a8c`_
+_Last verified: 2026-10-13 at `2dfc165`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M1 · Core Vault + Zest Adapter on Testnet (due 2026-10-31, 18 days left)
-**Next action:** deploy to testnet with a mock sBTC and mock venue, and record the end-to-end run (#7)
-**Blocked on:** nothing in the repo. D-004 needs sign-off before M1 is submitted.
+**Next action:** make `grant` refuse parameters that switch a limit off or abort later (#16), before the testnet deploy
+**Blocked on:** #7 needs funded testnet accounts from the owner. D-004 needs sign-off before M1 is submitted.
 
 ## Works (verified this session)
 | Capability | Verified by | Evidence |
@@ -19,6 +19,7 @@ _Last verified: 2026-10-13 at `4401a8c`_
 | Jing accepts a contract as maker: deposit and cancel | fork test pinned at block 9,036,500 | E-006 |
 | Bitflow refuses a contract as recipient | deployed source of five pools; fork test | E-003 |
 | CI: identity check and both fork suites on every pull request | green on GitHub's runners | E-008 |
+| The protocol specification names every v3 test, and CI fails if one goes missing | `node scripts/spec-crosscheck.mjs` | E-014 |
 
 ## Deployed
 | What | Network | Address | Last checked |
@@ -28,6 +29,7 @@ _Last verified: 2026-10-13 at `4401a8c`_
 The vault itself isn't deployed anywhere yet.
 
 ## Broken or unverified
+- `grant` accepts `window-len` 0, which switches the rate limit off, and `max-slip-bps` above 10,000, which aborts `allocate` (#16).
 - v3 handles SIP-010 assets only: native STX would need a `with-stx` allowance.
 - Jing fills: untested, since settlement needs a signed Pyth update.
 
