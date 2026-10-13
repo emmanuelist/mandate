@@ -43,6 +43,7 @@ Verified facts about what Mandate depends on, each with how and when it was chec
 - **An exceeded `as-contract?` allowance fails the call with `(err u<n>)`**, where n is the violated allowance's position in the list, so the vault's single allowance gives `(err u0)`. E-012.
 - **Clarity doesn't block re-entrancy.** A venue can call back into the vault mid-call. The call runs as the vault (inside its `as-contract?`, `tx-sender` is the vault), which owns no balances, positions or mandates, so it fails: `(err u105)` from `withdraw`. E-012, D-011.
 - **`as-contract?`'s body can't end in a response.** Put `try!` inside the body. `contracts/c4probe.clar`.
+- **Vitest 4 ignores `poolOptions`**, so test files run in parallel workers, each booting its own fork. On 2026-10-13 the first CI attempt at `531e2c4` failed before any test ran ("Failed to start forks worker" for all 17 files within ten seconds); a re-run passed, 68 of 68. If it recurs, set `fileParallelism: false` to run one file at a time, at a cost in CI time (#14).
 - **Fork tests run at the chain tip**, except the Jing suite, so changes in mainnet state can move results.
 - **Hiro rate limits.** The SDK waits 40 to 55 s and retries when rate-limited. On 2026-10-13 a local full run was limited 11 times and passed in 117 s; on GitHub's runners, 11 times and 249 s (E-008). No API key is needed for the suite to pass.
 
