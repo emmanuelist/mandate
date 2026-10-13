@@ -1,5 +1,5 @@
 # State
-_Last verified: 2026-10-13 at `2dfc165`_
+_Last verified: 2026-10-13 at `9e58f5d`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M1 · Core Vault + Zest Adapter on Testnet (due 2026-10-31, 18 days left)
@@ -18,7 +18,7 @@ _Last verified: 2026-10-13 at `2dfc165`_
 | Granite accepts a contract's sBTC as collateral | fork test | E-005 |
 | Jing accepts a contract as maker: deposit and cancel | fork test pinned at block 9,036,500 | E-006 |
 | Bitflow refuses a contract as recipient | deployed source of five pools; fork test | E-003 |
-| CI: identity check and both fork suites on every pull request | green on GitHub's runners | E-008 |
+| CI: identity check and both fork suites on every pull request, each fork suite up to three attempts | green on GitHub's runners | E-008, E-015 |
 | The protocol specification names every v3 test, and CI fails if one goes missing | `node scripts/spec-crosscheck.mjs` | E-014 |
 
 ## Deployed
