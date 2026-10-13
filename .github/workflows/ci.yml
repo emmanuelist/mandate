@@ -53,6 +53,16 @@ jobs:
           echo "checked $(git rev-list --count "$range") commit(s) in $range"
           exit $fail
 
+  spec:
+    name: spec names every v3 test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - run: node scripts/spec-crosscheck.mjs
+
   tests:
     name: clarinet tests (mainnet fork)
     runs-on: ubuntu-latest
