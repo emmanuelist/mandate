@@ -11,6 +11,12 @@
 ;; after revoking, after expiry, or after disallowing the venue. Unwinding is
 ;; de-risking, so the delegate's unwind skips the per-move and daily caps but
 ;; still counts against the rate window and the slippage budget.
+;;
+;; Measure, don't trust: every venue call is bracketed by balance reads. The
+;; vault's books follow what it actually holds, and a venue that reports more
+;; than it delivered, takes other than the move, or burns other than asked is
+;; refused. The per-owner allowlist stays the trust anchor, since a venue
+;; answers for its own share ledger.
 
 (use-trait ft 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.sip-010-trait)
 (use-trait venue .venue-trait.venue)
@@ -30,6 +36,8 @@
 (define-constant ERR_DAILY       (err u111))
 (define-constant ERR_LOSS_BUDGET (err u112))
 (define-constant ERR_POSITION    (err u113))
+(define-constant ERR_MISREPORT   (err u114))
+(define-constant ERR_AGENT       (err u115))
 
 (define-map mandates
   { owner: principal, agent: principal }
@@ -95,6 +103,9 @@
     (max-trades-per-window uint) (window-len uint)
     (max-daily-notional uint) (max-cum-slip-bps uint))
   (begin
+    ;; the vault can't be its own delegate: a venue calling back mid-call runs
+    ;; as the vault, so a mandate held by the vault would let that venue act
+    (asserts! (not (is-eq agent (try! (as-contract? () tx-sender)))) ERR_AGENT)
     (map-set mandates { owner: tx-sender, agent: agent }
       { max-notional: max-notional, expires: expires, max-slip-bps: max-slip-bps,
         max-trades-per-window: max-trades-per-window, window-len: window-len,
@@ -152,11 +163,20 @@
       (let ((quoted (unwrap! (contract-call? v convert-to-shares amount) ERR_QUOTE))
             (me     (try! (as-contract? () tx-sender))))
         (asserts! (> quoted u0) ERR_QUOTE)
-        (let ((floor (/ (* quoted (- BPS (get max-slip-bps m))) BPS)))
+        (let ((floor         (/ (* quoted (- BPS (get max-slip-bps m))) BPS))
+              (asset-before  (unwrap! (contract-call? asset get-balance me) ERR_QUOTE))
+              (shares-before (unwrap! (contract-call? v get-balance me) ERR_QUOTE)))
           (map-set balances { owner: owner, token: at } { amount: (- bal amount) })
           ;; the outflow is capped at the move, so a venue cannot take more
-          (let ((got (try! (as-contract? ((with-ft at "*" amount))
-                             (try! (contract-call? v deposit amount floor me))))))
+          (let ((reported (try! (as-contract? ((with-ft at "*" amount))
+                                  (try! (contract-call? v deposit amount floor me)))))
+                (asset-after  (unwrap! (contract-call? asset get-balance me) ERR_QUOTE))
+                (shares-after (unwrap! (contract-call? v get-balance me) ERR_QUOTE))
+                (spent (if (>= asset-before asset-after) (- asset-before asset-after) u0))
+                (got   (if (> shares-after shares-before) (- shares-after shares-before) u0)))
+            ;; measure, don't trust: exactly the move left, and the shares arrived
+            (asserts! (is-eq spent amount) ERR_MISREPORT)
+            (asserts! (<= reported got) ERR_MISREPORT)
             (asserts! (>= got floor) ERR_SLIPPAGE)
             (let ((slip (if (>= got quoted) u0 (/ (* (- quoted got) BPS) quoted)))
                   (cum  (get cum-slip-bps c)))
@@ -170,24 +190,36 @@
                 { shares: (+ (shares-of owner vn) got), asset: at })
               (ok got))))))))
 
-;; debit the position, redeem under a cap on the vault's shares, credit the asset
-(define-private (exit-position (owner principal) (v <venue>) (shares uint) (min-out uint))
+;; debit the position, redeem under a cap on the vault's shares, credit what
+;; actually arrived
+(define-private (exit-position (owner principal) (v <venue>) (asset <ft>) (shares uint) (min-out uint))
   (let ((vn   (contract-of v))
         (p    (unwrap! (position-of owner vn) ERR_POSITION))
         (have (get shares p))
         (me   (try! (as-contract? () tx-sender))))
+    (asserts! (is-eq (contract-of asset) (get asset p)) ERR_ASSET)
     (asserts! (and (> shares u0) (<= shares have)) ERR_POSITION)
     (if (is-eq shares have)
         (map-delete positions { owner: owner, venue: vn })
         (map-set positions { owner: owner, venue: vn } { shares: (- have shares), asset: (get asset p) }))
-    (let ((got (try! (as-contract? ((with-ft vn "*" shares))
-                       (try! (contract-call? v redeem shares min-out me))))))
+    (let ((shares-before (unwrap! (contract-call? v get-balance me) ERR_QUOTE))
+          (asset-before  (unwrap! (contract-call? asset get-balance me) ERR_QUOTE))
+          (reported (try! (as-contract? ((with-ft vn "*" shares))
+                            (try! (contract-call? v redeem shares min-out me)))))
+          (shares-after (unwrap! (contract-call? v get-balance me) ERR_QUOTE))
+          (asset-after  (unwrap! (contract-call? asset get-balance me) ERR_QUOTE))
+          (got (if (> asset-after asset-before) (- asset-after asset-before) u0)))
+      ;; measure, don't trust: exactly the shares asked were burned, and the
+      ;; assets the venue reported arrived
+      (asserts! (and (>= shares-before shares-after)
+                     (is-eq (- shares-before shares-after) shares)) ERR_MISREPORT)
+      (asserts! (<= reported got) ERR_MISREPORT)
       (asserts! (>= got min-out) ERR_SLIPPAGE)
       (credit owner (get asset p) got)
       (ok got))))
 
 ;; the delegate brings a position back to idle, inside the mandate
-(define-public (unwind (owner principal) (v <venue>) (shares uint))
+(define-public (unwind (owner principal) (v <venue>) (asset <ft>) (shares uint))
   (let ((m (unwrap! (map-get? mandates { owner: owner, agent: tx-sender }) ERR_NO_MANDATE))
         (c (counters-of owner tx-sender))
         (h burn-block-height))
@@ -199,7 +231,7 @@
       (asserts! (<= shares (shares-of owner (contract-of v))) ERR_POSITION)
       (let ((quoted (unwrap! (contract-call? v convert-to-assets shares) ERR_QUOTE)))
         (asserts! (> quoted u0) ERR_QUOTE)
-        (let ((got (try! (exit-position owner v shares
+        (let ((got (try! (exit-position owner v asset shares
                            (/ (* quoted (- BPS (get max-slip-bps m))) BPS))))
               (slip (if (>= got quoted) u0 (/ (* (- quoted got) BPS) quoted)))
               (cum  (get cum-slip-bps c)))
@@ -210,5 +242,5 @@
           (ok got))))))
 
 ;; the owner can always bring a position home: no mandate, no rate limit
-(define-public (owner-unwind (v <venue>) (shares uint) (min-out uint))
-  (exit-position tx-sender v shares min-out))
+(define-public (owner-unwind (v <venue>) (asset <ft>) (shares uint) (min-out uint))
+  (exit-position tx-sender v asset shares min-out))

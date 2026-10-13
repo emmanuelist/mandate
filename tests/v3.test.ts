@@ -46,9 +46,9 @@ const grant = (o: string, ag: string,
 const allocate = (owner: string, amount: number, by = agentX, asset = mock()) =>
   simnet.callPublicFn(V, "allocate", [Cl.principal(owner), venue(), asset, Cl.uint(amount)], by);
 const unwind = (owner: string, shares: number, by = agentX) =>
-  simnet.callPublicFn(V, "unwind", [Cl.principal(owner), venue(), Cl.uint(shares)], by);
+  simnet.callPublicFn(V, "unwind", [Cl.principal(owner), venue(), mock(), Cl.uint(shares)], by);
 const ownerUnwind = (owner: string, shares: number, minOut = 1) =>
-  simnet.callPublicFn(V, "owner-unwind", [venue(), Cl.uint(shares), Cl.uint(minOut)], owner);
+  simnet.callPublicFn(V, "owner-unwind", [venue(), mock(), Cl.uint(shares), Cl.uint(minOut)], owner);
 
 describe("v3: the delegate allocates through a venue", () => {
   it("allocates idle assets into the venue, unwinds them, and the owner withdraws everything", () => {
@@ -208,6 +208,12 @@ describe("v3 positions", () => {
     setup(); grant(alice, agentX);
     allocate(alice, 10_000);
     expect(unwind(alice, 10_001).result).toBeErr(Cl.uint(113));      // ERR_POSITION
+  });
+  it("unwinding with an asset other than the position's is refused", () => {
+    setup(); grant(alice, agentX);
+    allocate(alice, 10_000);
+    const r = simnet.callPublicFn(V, "unwind", [Cl.principal(alice), venue(), sbtc(), Cl.uint(10_000)], agentX);
+    expect(r.result).toBeErr(Cl.uint(106));                            // ERR_ASSET
   });
   it("the owner can't unwind another owner's position", () => {
     setup(); grant(alice, agentX);

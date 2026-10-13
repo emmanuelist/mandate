@@ -38,9 +38,9 @@ function setup(opts: Partial<{ cap: number; expires: number; slip: number; trade
 const allocate = (amount = AMT) =>
   simnet.callPublicFn(V, "allocate", [Cl.principal(OWNER), zest(), sbtc(), Cl.uint(amount)], agentX);
 const unwind = (shares: number) =>
-  simnet.callPublicFn(V, "unwind", [Cl.principal(OWNER), zest(), Cl.uint(shares)], agentX);
+  simnet.callPublicFn(V, "unwind", [Cl.principal(OWNER), zest(), sbtc(), Cl.uint(shares)], agentX);
 const ownerUnwind = (shares: number) =>
-  simnet.callPublicFn(V, "owner-unwind", [zest(), Cl.uint(shares), Cl.uint(1)], OWNER);
+  simnet.callPublicFn(V, "owner-unwind", [zest(), sbtc(), Cl.uint(shares), Cl.uint(1)], OWNER);
 
 describe("v3 against Zest's v0-vault-sbtc on a mainnet fork, with no adapter", () => {
   it("deposit, allocate, unwind, withdraw: every sat accounted for", () => {
