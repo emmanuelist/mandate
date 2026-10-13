@@ -36,7 +36,7 @@ Verified facts about what Mandate depends on, each with how and when it was chec
 - **Two SIP-010 traits.** Bitflow defines its own (`SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.sip-010-trait-ft-standard-v-1-1`); Granite and Jing use the canonical one (`SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard`). One trait type can't cover every venue. `contracts/granite-probe.clar`.
 - **`as-contract?`'s body can't end in a response.** Put `try!` inside the body. `contracts/c4probe.clar`.
 - **Fork tests run at the chain tip**, except the Jing suite, so changes in mainnet state can move results.
-- **Hiro rate limits.** The SDK waits and retries when rate-limited: a local full run on 2026-10-13 was limited 11 times and still passed in 117 s.
+- **Hiro rate limits.** The SDK waits 40 to 55 s and retries when rate-limited. On 2026-10-13 a local full run was limited 11 times and passed in 117 s; on GitHub's runners, 11 times and 249 s (E-008). No API key is needed for the suite to pass.
 
 ## Environment
 | Name | Purpose | Where |

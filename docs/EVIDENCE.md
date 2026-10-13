@@ -10,6 +10,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-005 | 2026-10-13 | Granite accepts real sBTC posted as collateral by a contract, on a mainnet fork | `tests/granite-fork.test.ts`: `(ok true)` (output in E-007) | `9819746` |
 | E-006 | 2026-10-13 | Jing's `markets-sbtc-stx-jing-v6-2` accepts a contract as maker on a fork pinned at block 9,036,500: the deposit is recorded under the contract and a cancel refunds it in full. Fills are not tested; settlement needs a signed Pyth update | `npx vitest run --config vitest.jing.config.ts` (output below) | `9819746` |
 | E-007 | 2026-10-13 | The full suite passes: 30 tests across 13 files on a mainnet fork, including the fixes for the five defects an adversarial pass found in the first vault | `npx vitest run` (output below) | `9819746` |
+| E-008 | 2026-10-13 | CI passes on GitHub's runners: the identity check passes on the pull request's 5 commits, and on a mainnet fork the full suite (30 tests, 13 files) and the Jing suite (1 test) pass. Hiro rate-limited the run 11 times and the SDK's retries absorbed it | [CI run](https://github.com/emmanuelist/mandate/actions/runs/38457131065): commit identity 7 s; tests 4 m 41 s (full suite 249 s, Jing 15 s) | `c519429` |
 
 ### E-001 output
 ~~~text
