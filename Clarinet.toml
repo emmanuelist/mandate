@@ -97,6 +97,9 @@ clarity_version = 3
 [repl.remote_data]
 enabled = true
 api_url = "https://api.hiro.so"
+# Pinned so every run forks the same settled block: at the tip, a lagging API
+# node can answer "Block not found" and the SDK panics (D-012). Bump on purpose.
+initial_height = 9194000
 
 [contracts.venue-trait]
 path = "contracts/venue-trait.clar"
