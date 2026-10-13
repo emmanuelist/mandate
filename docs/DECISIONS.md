@@ -47,3 +47,10 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Context:** an external audit doesn't fit this stage's budget.
 **Decision:** bound exposure instead. From the first mainnet deploy the contract enforces a per-vault AUM cap (M2), backed by a structured review: threat model, invariant tests, at least 40 adversarial cases in public CI, static checks and a published findings log. An external audit comes before that cap rises.
 **Consequences:** the cap stays low until audited.
+
+## D-009 · The vault calls venues through its own trait; Zest needs no adapter · 2026-10-13 · accepted
+**Context:** Zest's vaults take funds from `contract-caller`, so an adapter between the vault and Zest would hold the funds during every call, which is what #5 and #6 first planned around. Zest's vaults also implement Zest's own `tokenized-vault` trait.
+**Decision:** `contracts/venue-trait.clar` declares the four functions the vault needs, in the tokenized-vault shape. Zest's vaults satisfy it as deployed, because trait conformance is structural, so the vault calls Zest directly and is Zest's account: it pays from its own balance under an `as-contract?` allowance capped at the move, and holds its own shares. Adapters are only for venues without this shape, such as Granite's lending pool in M2.
+**Alternatives:** an adapter for every venue, Zest included, which holds funds in every call; typing the venue as Zest's own trait principal, which ties the vault to Zest's deployment and can't deploy to testnet, where Zest doesn't exist.
+**Consequences:** #5 becomes a fork test of the vault against Zest with no adapter, and #6 bounds what a venue can do in a call rather than what an adapter does while holding funds. This replaces the adapter plan #5 and #6 were first written around.
+**Evidence:** E-009, E-010.

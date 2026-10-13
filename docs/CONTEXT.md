@@ -12,6 +12,8 @@ Verified facts about what Mandate depends on, each with how and when it was chec
 |---|---|---|---|
 | sBTC | `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token` | SIP-010 `transfer` | every fork test (E-007) |
 | Zest sBTC vault | `SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc` | `deposit (amount min-out recipient)`, `redeem (amount min-out recipient)`; read-only `convert-to-shares`, `convert-to-assets` | interface and deployed source, 2026-10-13; E-002, E-004 |
+| Zest's own traits | `SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.vault-traits` | `v0-vault-sbtc` declares `tokenized-vault` (line 9): SIP-010 functions plus `get-assets`, `convert-to-shares`, `convert-to-assets`, `deposit`, `redeem` | deployed source, 2026-10-13 |
+| Zest shares | `zft`, defined in `v0-vault-sbtc` | SIP-010 `transfer (amount from to memo)`, which accepts `tx-sender` or `contract-caller` as `from` | deployed source, 2026-10-13 |
 | Granite borrower | `SPSX722NK9V3A8D3CVQT0CDY4EBQ3E9FSDDE61FT.borrower-v1` | `add-collateral` | E-005 |
 | Granite lending pool | `SPSX722NK9V3A8D3CVQT0CDY4EBQ3E9FSDDE61FT.liquidity-provider-v1` | `deposit (assets recipient)`, which credits `contract-caller`; no `is-standard` check | deployed source, 2026-10-06 |
 | Jing sBTC/STX market | `SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6-2` | `deposit-token-x`, `cancel-token-x-deposit`; Clarity 5 | E-006 |
@@ -34,6 +36,9 @@ Verified facts about what Mandate depends on, each with how and when it was chec
 - **Jing fills need a signed Pyth update**, so they can't be tested on a fork. On 2026-10-07 v6-2 had six transactions in total, and v5 and v6 were paused.
 - **Testnet** has more than a dozen tokens named sBTC from different deployers, none confirmed as official, and Zest's v2 repository has only local simnet setups, with no testnet deployment found. Token metadata API and repository tree, 2026-10-13.
 - **Two SIP-010 traits.** Bitflow defines its own (`SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.sip-010-trait-ft-standard-v-1-1`); Granite and Jing use the canonical one (`SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard`). One trait type can't cover every venue. `contracts/granite-probe.clar`.
+- **Trait conformance is structural.** A contract can be passed as a trait it never declares if its functions match: Zest's vault as Mandate's venue trait (E-009), and sBTC as Bitflow's SIP-010 trait in v2's tests.
+- **An `as-contract?` allowance on the venue's own token covers the venue burning the vault's shares on redeem** (`with-ft <venue> "*" <shares>`). E-009.
+- **Only four devnet accounts exist:** `deployer` and `wallet_1` to `wallet_3` (`settings/Devnet.toml`). Tests that need a stranger reuse `wallet_2`.
 - **`as-contract?`'s body can't end in a response.** Put `try!` inside the body. `contracts/c4probe.clar`.
 - **Fork tests run at the chain tip**, except the Jing suite, so changes in mainnet state can move results.
 - **Hiro rate limits.** The SDK waits 40 to 55 s and retries when rate-limited. On 2026-10-13 a local full run was limited 11 times and passed in 117 s; on GitHub's runners, 11 times and 249 s (E-008). No API key is needed for the suite to pass.

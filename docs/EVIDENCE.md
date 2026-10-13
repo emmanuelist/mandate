@@ -11,6 +11,8 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-006 | 2026-10-13 | Jing's `markets-sbtc-stx-jing-v6-2` accepts a contract as maker on a fork pinned at block 9,036,500: the deposit is recorded under the contract and a cancel refunds it in full. Fills are not tested; settlement needs a signed Pyth update | `npx vitest run --config vitest.jing.config.ts` (output below) | `9819746` |
 | E-007 | 2026-10-13 | The full suite passes: 30 tests across 13 files on a mainnet fork, including the fixes for the five defects an adversarial pass found in the first vault | `npx vitest run` (output below) | `9819746` |
 | E-008 | 2026-10-13 | CI passes on GitHub's runners: the identity check passes on the pull request's 5 commits, and on a mainnet fork the full suite (30 tests, 13 files) and the Jing suite (1 test) pass. Hiro rate-limited the run 11 times and the SDK's retries absorbed it | [CI run](https://github.com/emmanuelist/mandate/actions/runs/38457131065): commit identity 7 s; tests 4 m 41 s (full suite 249 s, Jing 15 s) | `c519429` |
+| E-009 | 2026-10-13 | A contract reaches Zest's `v0-vault-sbtc` through Mandate's own venue trait, which Zest never declares: quote, deposit and redeem on a mainnet fork, with the contract as Zest's account and no adapter in between | `tests/venue-spike.test.ts` (output below) | `1d390ce` |
+| E-010 | 2026-10-13 | `mandate-vault-v3` allocates and unwinds through the venue trait with every v2 limit and fix: 23 tests pass against a deterministic venue, and the full suite passes with 54 tests across 15 files | `npx vitest run tests/v3.test.ts`; `npx vitest run` (output below) | `1100249` |
 
 ### E-001 output
 ~~~text
@@ -88,4 +90,34 @@ Selected results from the same run:
   bob withdrawing alice's 400k: (err u105)
   execute with no allowlist entry: (err u106)
   execute 1000 against a 500 daily cap: (err u111)
+~~~
+
+### E-009 output
+~~~text
+$ npx vitest run tests/venue-spike.test.ts
+  fund spike with real sBTC   : (ok true)
+  quote via venue trait       : (ok u99937)
+  deposit via venue trait     : (ok u99937)
+  spike sBTC / Zest shares    : (ok u0) / (ok u99937)
+  quote out via venue trait   : (ok u99999)
+  redeem via venue trait      : (ok u99999)
+  spike sBTC / Zest shares    : (ok u99999) / (ok u0)
+      Tests  1 passed (1)
+~~~
+
+### E-010 output
+~~~text
+$ npx vitest run tests/v3.test.ts
+  allocate 100k            : (ok u100000) | idle u300000 | position u100000 | vault shares (ok u100000)
+  unwind 40k               : (ok u40000) | idle u340000 | position u60000
+  owner withdraws 400k     : (ok true) | wallet (ok u1000000)
+  2% fill vs 1% limit      : (err u201) | idle u400000
+  0.6% then 0.6% vs 1% cum : (ok u9940) (err u112)
+  after revoke: agent unwind (err u100) | owner unwind (ok u100000) | withdraw (ok true)
+  agentX moving 300k of alice (cap 1k): (err u102)
+      Tests  23 passed (23)
+
+$ npx vitest run
+ Test Files  15 passed (15)
+      Tests  54 passed (54)
 ~~~
