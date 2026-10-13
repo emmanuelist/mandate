@@ -1,0 +1,70 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  identity:
+    name: commit identity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: every commit is the owner's, with no trailers and no banned words
+        env:
+          OWNER: emmanuel.paul75@yahoo.com
+          # Kept in a secret so this check never writes the words into history.
+          BANNED: ${{ secrets.FORBIDDEN_WORDS }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -eu
+          if [ -z "$BANNED" ]; then
+            echo "::error::the FORBIDDEN_WORDS secret is not set"; exit 1
+          fi
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            range="$HEAD"
+          else
+            range="$BASE..$HEAD"
+          fi
+          fail=0
+          for c in $(git rev-list "$range"); do
+            a=$(git log -1 --format=%ae "$c"); m=$(git log -1 --format=%ce "$c")
+            if [ "$a" != "$OWNER" ] || [ "$m" != "$OWNER" ]; then
+              echo "::error::$c is authored by $a and committed by $m"; fail=1
+            fi
+            if [ -n "$(git log -1 --format=%B "$c" | git interpret-trailers --parse)" ]; then
+              echo "::error::$c has a trailer in its message"; fail=1
+            fi
+            if git log -1 --format='%an%n%cn%n%B' "$c" | grep -qiE "$BANNED"; then
+              echo "::error::$c contains a banned word"; fail=1
+            fi
+          done
+          if git ls-tree -r --name-only "$HEAD" | grep -qiE "$BANNED"; then
+            echo "::error::a tracked file name contains a banned word"; fail=1
+          fi
+          if git grep -I -qiE "$BANNED" "$HEAD" -- .; then
+            echo "::error::a tracked file contains a banned word"; fail=1
+          fi
+          echo "checked $(git rev-list --count "$range") commit(s) in $range"
+          exit $fail
+
+  tests:
+    name: clarinet tests (mainnet fork)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - name: full suite (forks Stacks mainnet through api.hiro.so)
+        run: npx vitest run
+      - name: Jing suite (fork pinned at block 9036500)
+        run: npx vitest run --config vitest.jing.config.ts
