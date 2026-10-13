@@ -97,3 +97,14 @@ clarity_version = 3
 [repl.remote_data]
 enabled = true
 api_url = "https://api.hiro.so"
+
+[contracts.venue-trait]
+path = "contracts/venue-trait.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.venue-spike]
+path = "contracts/venue-spike.clar"
+epoch = "latest"
+clarity_version = 4
+
