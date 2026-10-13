@@ -56,7 +56,7 @@ jobs:
   tests:
     name: clarinet tests (mainnet fork)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -64,7 +64,19 @@ jobs:
           node-version: 26
           cache: npm
       - run: npm ci
-      - name: full suite (fork pinned at block 9194000)
-        run: npx vitest run
-      - name: Jing suite (fork pinned at block 9036500)
-        run: npx vitest run --config vitest.jing.config.ts
+      # Under Hiro's rate limit the SDK sometimes fails a worker or a read. The forks are pinned, so a real failure fails
+      # every attempt and an infrastructure one doesn't (D-013).
+      - name: full suite (fork pinned at block 9194000), up to three attempts
+        run: |
+          for i in 1 2 3; do
+            npx vitest run && exit 0
+            echo "::warning::full suite attempt $i failed"
+          done
+          exit 1
+      - name: Jing suite (fork pinned at block 9036500), up to three attempts
+        run: |
+          for i in 1 2 3; do
+            npx vitest run --config vitest.jing.config.ts && exit 0
+            echo "::warning::Jing suite attempt $i failed"
+          done
+          exit 1
