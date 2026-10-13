@@ -14,6 +14,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-009 | 2026-10-13 | A contract reaches Zest's `v0-vault-sbtc` through Mandate's own venue trait, which Zest never declares: quote, deposit and redeem on a mainnet fork, with the contract as Zest's account and no adapter in between | `tests/venue-spike.test.ts` (output below) | `1d390ce` |
 | E-010 | 2026-10-13 | `mandate-vault-v3` allocates and unwinds through the venue trait with every v2 limit and fix: 23 tests pass against a deterministic venue, and the full suite passes with 54 tests across 15 files | `npx vitest run tests/v3.test.ts`; `npx vitest run` (output below) | `1100249` |
 | E-011 | 2026-10-13 | `mandate-vault-v3` works against Zest's real `v0-vault-sbtc` on a mainnet fork, with no adapter: 100,000 sats allocate for 99,937 shares, exactly Zest's quote, with every share held by the vault; unwinding returns 99,999 sats, exactly the quote; the owner's wallet ends 1 sat down from share rounding and the vault ends empty. A zero-slippage mandate allocates; the owner exits with no mandate after revoking and after expiry; every refusal holds with nothing leaving the vault. Full suite: 60 tests across 16 files | `tests/v3-zest-fork.test.ts`; `npx vitest run` (output below) | `f7bc6f0` |
+| E-012 | 2026-10-13 | Against a hostile venue every attack is refused with nothing moved: taking more than the move fails at the allowance (`err u0`); reporting more shares than it mints, and paying less than it reports on redeem, fail with `u114` for the delegate and the owner; calling back into the vault mid-call runs as the vault and fails (`u105`); burning more shares than asked fails at the allowance, and another owner's shares are untouched; granting the vault as its own delegate fails (`u115`). With measurement in place, real Zest still gives E-011's numbers. Full suite: 68 tests across 17 files | `tests/v3-hostile.test.ts`, `tests/v3-zest-fork.test.ts`; `npx vitest run` (output below) | `c4cc7b9` |
 
 ### E-001 output
 ~~~text
@@ -142,4 +143,25 @@ $ npx vitest run tests/v3-zest-fork.test.ts
 $ npx vitest run
  Test Files  16 passed (16)
       Tests  60 passed (60)
+~~~
+
+### E-012 output
+~~~text
+$ npx vitest run tests/v3-hostile.test.ts
+  takes move + 1           : (err u0) | idle | position | vault tokens | vault shares: u400000 | u0 | (ok u400000) | (ok u0)
+  reports 2x the shares    : (err u114) | u400000 | u0 | (ok u400000) | (ok u0)
+  re-enters the vault      : (err u105) | u400000 | u0 | (ok u400000) | (ok u0)
+  grant to the vault itself: (err u115)
+  pays half, reports full  : (err u114) (delegate) (err u114) (owner) | u390000 | u10000 | (ok u390000) | (ok u10000)
+  burns asked + 1          : (err u0) | u390000 | u10000 | (ok u780000) | (ok u20000) | bob u10000
+      Tests  7 passed (7)
+
+$ npx vitest run tests/v3-zest-fork.test.ts
+  delegate allocates       : (ok u99937) | quote 99937 | vault holds 99937 Zest shares | delegate holds 0 | vault sBTC 0
+  delegate unwinds         : (ok u99999) | quote 99999 | idle 99999 | vault sBTC 99999 | vault Zest shares 0
+      Tests  6 passed (6)
+
+$ npx vitest run
+ Test Files  17 passed (17)
+      Tests  68 passed (68)
 ~~~

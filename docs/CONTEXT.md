@@ -11,7 +11,7 @@ Verified facts about what Mandate depends on, each with how and when it was chec
 | Name | Contract | What we use | Verified how |
 |---|---|---|---|
 | sBTC | `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token` | SIP-010 `transfer` | every fork test (E-007) |
-| Zest sBTC vault | `SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc` | `deposit (amount min-out recipient)`, `redeem (amount min-out recipient)`; read-only `convert-to-shares`, `convert-to-assets` | interface and deployed source, 2026-10-13; E-002, E-004 |
+| Zest sBTC vault | `SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc` | `deposit (amount min-out recipient)`, `redeem (amount min-out recipient)`; read-only `convert-to-shares`, `convert-to-assets`, `get-balance` | interface and deployed source, 2026-10-13; E-002, E-004 |
 | Zest's own traits | `SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.vault-traits` | `v0-vault-sbtc` declares `tokenized-vault` (line 9): SIP-010 functions plus `get-assets`, `convert-to-shares`, `convert-to-assets`, `deposit`, `redeem` | deployed source, 2026-10-13 |
 | Zest shares | `zft`, defined in `v0-vault-sbtc` | SIP-010 `transfer (amount from to memo)`, which accepts `tx-sender` or `contract-caller` as `from` | deployed source, 2026-10-13 |
 | Granite borrower | `SPSX722NK9V3A8D3CVQT0CDY4EBQ3E9FSDDE61FT.borrower-v1` | `add-collateral` | E-005 |
@@ -40,6 +40,8 @@ Verified facts about what Mandate depends on, each with how and when it was chec
 - **Trait conformance is structural.** A contract can be passed as a trait it never declares if its functions match: Zest's vault as Mandate's venue trait (E-009), and sBTC as Bitflow's SIP-010 trait in v2's tests.
 - **An `as-contract?` allowance on the venue's own token covers the venue burning the vault's shares on redeem** (`with-ft <venue> "*" <shares>`). E-009.
 - **Only four devnet accounts exist:** `deployer` and `wallet_1` to `wallet_3` (`settings/Devnet.toml`). Tests that need a stranger reuse `wallet_2`.
+- **An exceeded `as-contract?` allowance fails the call with `(err u<n>)`**, where n is the violated allowance's position in the list, so the vault's single allowance gives `(err u0)`. E-012.
+- **Clarity doesn't block re-entrancy.** A venue can call back into the vault mid-call. The call runs as the vault (inside its `as-contract?`, `tx-sender` is the vault), which owns no balances, positions or mandates, so it fails: `(err u105)` from `withdraw`. E-012, D-011.
 - **`as-contract?`'s body can't end in a response.** Put `try!` inside the body. `contracts/c4probe.clar`.
 - **Fork tests run at the chain tip**, except the Jing suite, so changes in mainnet state can move results.
 - **Hiro rate limits.** The SDK waits 40 to 55 s and retries when rate-limited. On 2026-10-13 a local full run was limited 11 times and passed in 117 s; on GitHub's runners, 11 times and 249 s (E-008). No API key is needed for the suite to pass.

@@ -54,3 +54,16 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Alternatives:** an adapter for every venue, Zest included, which holds funds in every call; typing the venue as Zest's own trait principal, which ties the vault to Zest's deployment and can't deploy to testnet, where Zest doesn't exist.
 **Consequences:** #5 becomes a fork test of the vault against Zest with no adapter, and #6 bounds what a venue can do in a call rather than what an adapter does while holding funds. This replaces the adapter plan #5 and #6 were first written around.
 **Evidence:** E-009, E-010.
+
+## D-010 · No contract-hash check on venues · 2026-10-13 · accepted
+**Context:** #6 asked whether a `contract-hash?` check adds anything to the per-owner venue allowlist.
+**Decision:** no. The allowlist pins each venue by principal, and the code at a deployed principal can never change, so hashing it adds nothing. What can change at a fixed principal is its data, such as Zest's pause flags or fee settings, and a code hash doesn't see that either.
+**Alternatives:** pinning by code hash so an owner could approve any contract with a given code, which only helps when venues are many instances of one template. Mandate doesn't use those.
+**Consequences:** revisit if venues ever come from a template deployed per owner or per pool.
+
+## D-011 · Measure, don't trust; the vault can't be its own delegate · 2026-10-13 · accepted
+**Context:** v3 credited whatever a venue's `deposit` and `redeem` returned. Tests with a hostile venue (E-012) also showed that Clarity lets a venue call back into the vault mid-call, running as the vault itself.
+**Decision:** every venue call is bracketed by balance reads, and the books follow what arrived. A call is refused if anything other than the move left the vault, fewer shares arrived than reported, other than the asked shares were burned, or fewer assets arrived than reported (`ERR_MISREPORT`, u114). The vault refuses to be granted as a delegate (`ERR_AGENT`, u115), so a callback running as the vault holds no mandate to act on.
+**Alternatives:** trusting the venue's return values, which lets a buggy venue inflate a position; forbidding callbacks, which Clarity has no guard for. The vault's own identity is the protection.
+**Consequences:** each allocate and unwind makes four extra reads. A venue still answers for its own share ledger, so the per-owner allowlist stays the trust anchor.
+**Evidence:** E-012.
