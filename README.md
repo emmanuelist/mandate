@@ -55,6 +55,9 @@ Every constraint is an integer check against on-chain reads. No oracle.
 The minimum-output floor is quoted on-chain rather than supplied by the caller. A
 delegate that could choose its own slippage floor could defeat the whole design.
 
+The full specification, with the order of every check, the error codes and the threat
+model, is in [docs/SPEC.md](docs/SPEC.md).
+
 ## Venues
 
 Verified against deployed mainnet contracts using a Clarinet remote-data fork.
