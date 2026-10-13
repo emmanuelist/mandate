@@ -65,9 +65,9 @@ Verified against deployed mainnet contracts using a Clarinet remote-data fork.
 | Granite | yes | Same pattern; `liquidity-provider-v1` has no `is-standard` at all |
 | Bitflow | **no** | `pool-transfer` asserts `(is-standard recipient)` |
 
-Bitflow's pools cannot pay a contract at all. The same guard appears in xyk and
-both stableswap pools, and in `pool-mint` and `pool-burn`, so contract-held
-liquidity provision is closed too. Clarity contracts are immutable, so this is
+Bitflow's pools cannot pay a contract at all. The same guard appears in the xyk
+pool, both stableswap pools and the DLMM pools, and in `pool-mint` and
+`pool-burn`, so contract-held liquidity provision is closed too. Clarity contracts are immutable, so this is
 permanent rather than pending. See [BITFLOW-REPORT.md](BITFLOW-REPORT.md).
 
 That finding is why this project allocates to lending venues rather than trading

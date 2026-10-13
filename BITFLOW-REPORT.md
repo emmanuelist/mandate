@@ -29,9 +29,20 @@ sBTC calls `swap-x-for-y` through `as-contract` against `xyk-pool-sbtc-stx-v-1-1
 
 Same guard present in:
 
-- `xyk-pool-sbtc-stx-v-1-1` — `pool-transfer`
+- `xyk-pool-sbtc-stx-v-1-1` — `pool-transfer` line 242
 - `stableswap-pool-sbtc-pbtc-v-1-1` — `pool-transfer`
 - `stableswap-pool-aeusdc-usdh-v-1-2` — `pool-transfer`
+- `dlmm-pool-stx-sbtc-v-3-bps-15` — `pool-transfer` line 534
+- `dlmm-pool-sbtc-usdcx-v-2-bps-10` — `pool-transfer` line 534
+
+The DLMM line is worth calling out separately because it is the newest product
+and routes through a different core. `dlmm-swap-router-v-1-1` has no
+`is-standard` assertion anywhere, and `dlmm-core-v-1-1` has four, all admin-side
+(`set-swap-fee-exemption`, `set-variable-fees-manager`, `set-fee-address`,
+`create-pool`). But `dlmm-core-v-1-1.swap-x-for-y` binds `(caller tx-sender)` and
+calls `pool-transfer ... caller`, and the DLMM pool asserts `is-standard` on the
+recipient exactly as the xyk pool does. Same shape, one layer down, in all three
+product lines.
 
 `pool-mint` and `pool-burn` carry it too, so LP tokens cannot be minted to a contract:
 contract-held liquidity provision is also closed.
