@@ -23,6 +23,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-018 | 2026-10-14 | One mandate end to end on testnet, one transaction per step: the owner deposits 400,000 mock sBTC and grants a delegate, the delegate allocates 100,000 into the mock venue and unwinds it, and the owner withdraws all 400,000. Afterwards the owner's vault balance and position and the vault's tokens are zero, and the owner's wallet holds all 1,000,000 minted | [deposit](https://explorer.hiro.so/txid/0xcc2bd1d810ff14b4e062d73d28ea797ed2b6582c7cf3dfaa287fa66f5aa60e99?chain=testnet) `(ok true)` · [grant](https://explorer.hiro.so/txid/0x37d9f9c90177209edecb94bc08fc62a2b0436f2d0d97a223b24eb23ffc80d5ad?chain=testnet) `(ok true)` · [allocate](https://explorer.hiro.so/txid/0x5ec913434edac52e3931ffeff81d1dac5ce7d85d60deb35380dcbb223ffa7363?chain=testnet) `(ok u100000)` · [unwind](https://explorer.hiro.so/txid/0xeb6f3bb4678fd50f4616e14d15cf49391b86fd18499c38a2fdd97cd615930b68?chain=testnet) `(ok u100000)` · [withdraw](https://explorer.hiro.so/txid/0xfe071e940bcd51510c8cf451b99ec2a46b8e9752cdcba546076843a1e14c1974?chain=testnet) `(ok true)`; blocks 719,271 to 719,287. All nine steps, with the reads after, are in `deployments/testnet-run.json` at `7f65fef`, re-read from the chain in E-017's output | `7f65fef` |
 | E-019 | 2026-10-14 | Rebuilding is one command. On the deployed contracts, `npm run testnet` finds all five identical to the repo and sends no deploys, then repeats the lifecycle, and the books reconcile against reads taken before the run; the script fails if they don't. With a contract edited locally, the deploy step stops before sending anything and `npm run testnet:verify` fails. A fresh run costs account 1 8.11 STX: 2.5 in deploy fees, 0.61 in call fees, and 5 sent to the delegate | [deposit](https://explorer.hiro.so/txid/0x1b7330937d2c0d4dfec50d2023302223b9e6fc6b86dbb345ffbab22bf7852d0f?chain=testnet) `(ok true)` · [grant](https://explorer.hiro.so/txid/0xfb677877d675498fe0dfccd0f95f654aa576c9c81bb34b64eece2f315ae8c673?chain=testnet) `(ok true)` · [allocate](https://explorer.hiro.so/txid/0x73924838982ced49643ec0e3710b712b624fb140ed7e5e33e734a9eeb431e03f?chain=testnet) `(ok u100000)` · [unwind](https://explorer.hiro.so/txid/0x43bad4af1df7ee5f48df87a9cf9b7a8f89a2981ef99f97b53248d1c5e536f2ab?chain=testnet) `(ok u100000)` · [withdraw](https://explorer.hiro.so/txid/0x1f978cfe8c63bd739e09495ca52f93b412bed98d60998ace774fa2e795cf7af5?chain=testnet) `(ok true)`; blocks 719,366 to 719,385; output below | `0706d6d` |
 | E-020 | 2026-10-14 | Back-to-back retries fail together inside a rate-limit window. On `main` after #21, the Jing suite's worker failed to start three times between 00:40:03.8 and 00:40:06.4 UTC, three seconds after Hiro had told the runner to wait 29 and 53 s. The pull request's run of the same code started the suite after its last wait had run out, and passed. Rerun, the failed job passed: the Jing suite started inside a window again, and this time the SDK waited out its one rate limit. The new loop waits 60 s between attempts and still exits at once on a pass | [run 38491027038](https://github.com/emmanuelist/mandate/actions/runs/38491027038), attempts 1 and 2; [run 38490379351](https://github.com/emmanuelist/mandate/actions/runs/38490379351); the loop run locally (output below) | `fb2d0d4`, `e60ffca` |
+| E-021 | 2026-10-14 | The minute's wait worked the first time CI needed it. On #23, Hiro told the runner to wait 51 and 53 s at 00:55:02 and 00:55:03 UTC; ten of the full suite's workers failed to start at 00:55:12, and the attempt failed. The retry began at 00:56:13, after that window had closed, and passed 73 of 73; the Jing suite then passed. Back to back, the retry would have started inside the window | [run 38492547121](https://github.com/emmanuelist/mandate/actions/runs/38492547121) (output below) | `cb54a4d` |
 
 ### E-001 output
 ~~~text
@@ -305,4 +306,19 @@ waits Hiro asked for in this attempt (s): 1 1 25 26 29 53 55 56 56 56 57 57
 passes on attempt 1: exit 0, 1 attempt, no wait
 passes on attempt 2: exit 0, 2 attempts, one 60 s wait
 never passes:        exit 1, 3 attempts, two 60 s waits
+~~~
+
+### E-021 output
+~~~text
+# run 38492547121: #23 (UTC)
+00:52:08.1  full suite  attempt 1 starts
+00:55:01.8  full suite  Rate limited, retrying after 51 seconds...
+00:55:03.2  full suite  Rate limited, retrying after 53 seconds...
+00:55:12.4  full suite  Error: [vitest-pool]: Failed to start forks worker, for 10 test files at once
+00:55:12.4  full suite  Test Files  7 passed (7), Tests  9 passed (9)
+00:55:12.5  full suite  attempt 1 failed
+00:56:13.0  full suite  attempt 2 starts, after the 60 s wait
+01:02:06.5  full suite  Tests  73 passed (73)
+01:03:06.3  Jing suite  Tests  1 passed (1)
+no panics in the run
 ~~~

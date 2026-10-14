@@ -93,4 +93,4 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Decision:** a failed attempt waits 60 s before the next. The longest wait Hiro has asked for in our logs is 57 s.
 **Alternatives:** running the Jing suite before the full suite's burst of requests, which avoids this case but not a worker failing mid-suite (#19); waiting before every suite, which costs a minute on every run rather than only after a failure.
 **Consequences:** a real failure takes two minutes longer to report, well inside the job's 45. That a worker can't start because its first fork requests are rate-limited is inferred from the timing, not traced inside the SDK.
-**Evidence:** E-020.
+**Evidence:** E-020, E-021.
