@@ -237,6 +237,56 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 - **No swaps on DEXs** (D-002).
 - **No per-vault AUM cap yet.** It comes before mainnet, in M2.
 
+## Adversarial suite
+
+`tests/v4-adversarial.test.ts` attempts 43 attacks a hostile delegate, or the people around it, could make. Each case asserts the exact refusal, that the call emitted no asset events, and that no balance anywhere changed: the vault's, each venue's, every owner's wallet, idle balance and position, and the delegate's. Two deliberate mutants, a wrong expected code and a legal move wrapped as an attack, make it fail (E-029).
+
+| Class | Case | Refused with |
+|---|---|---|
+| oversized orders | "oversized: one sat over the per-move cap" | `u102` |
+| oversized orders | "oversized: ten times the per-move cap" | `u102` |
+| oversized orders | "oversized: the largest possible amount" | `u102` |
+| oversized orders | "oversized: the whole idle balance in one move" | `u102` |
+| oversized orders | "oversized: a move inside the per-move cap that passes the day's total" | `u111` |
+| oversized orders | "oversized: a move larger than the owner's idle balance" | `u105` |
+| oversized orders | "oversized: a zero move, which would only spend the rate window" | `u109` |
+| oversized orders | "oversized: unwinding one share more than the position" | `u113` |
+| unlisted assets | "unlisted asset: an asset the owner never allowlisted" | `u106` |
+| unlisted assets | "unlisted asset: an asset the owner disallowed after granting" | `u106` |
+| unlisted assets | "unlisted asset: an asset only another owner allowlisted" | `u106` |
+| unlisted assets | "unlisted asset: an asset the delegate allowlisted for itself" | `u106` |
+| unlisted assets | "unlisted asset: a listed venue paired with an asset it wasn't listed for" | `u107` |
+| unlisted assets | "unlisted asset: unwinding into an asset other than the position's" | `u106` |
+| substituted venues | "substituted venue: a venue the owner never listed" | `u107` |
+| substituted venues | "substituted venue: a venue only another owner listed" | `u107` |
+| substituted venues | "substituted venue: a venue the delegate listed for itself" | `u107` |
+| substituted venues | "substituted venue: a venue the owner disallowed" | `u107` |
+| substituted venues | "substituted venue: a venue built to keep what it is given" | `u107` |
+| substituted venues | "substituted venue: unwinding from a venue that holds no position" | `u113` |
+| substituted venues | "substituted venue: the delegate calls the owner's own exit" | `u113` |
+| rate-limit races | "rate race: one move more than the window allows" | `u110` |
+| rate-limit races | "rate race: alternating allocations and unwinds past the window" | `u110` |
+| rate-limit races | "rate race: dust moves to burn through the window" | `u110` |
+| rate-limit races | "rate race: the delegate re-grants itself to reset its counters" | `u110` |
+| rate-limit races | "rate race: waiting most of the window doesn't reset it" | `u110` |
+| rate-limit races | "rate race: waiting most of the day doesn't reset the day's total" | `u111` |
+| expiry and revocation | "expiry: a move at the expiry height" | `u103` |
+| expiry and revocation | "expiry: a move after expiry" | `u103` |
+| expiry and revocation | "expiry: an unwind after expiry" | `u103` |
+| expiry and revocation | "expiry: the delegate grants itself a fresh mandate after expiry" | `u103` |
+| expiry and revocation | "revocation: a move after the owner revokes" | `u100` |
+| expiry and revocation | "revocation: an unwind after the owner revokes" | `u100` |
+| reaching another owner's balance | "another owner: a stranger with no mandate moves an owner's balance" | `u100` |
+| reaching another owner's balance | "another owner: one owner's mandate doesn't reach another owner's balance" | `u100` |
+| reaching another owner's balance | "another owner: the other owner's mandate doesn't reach this one" | `u100` |
+| reaching another owner's balance | "another owner: unwinding another owner's shares at the same venue" | `u113` |
+| reaching another owner's balance | "another owner: an owner withdraws past their own balance while the vault holds others'" | `u105` |
+| reaching another owner's balance | "another owner: an owner unwinds another owner's position" | `u113` |
+| reaching another owner's balance | "another owner: the vault named as the owner" | `u100` |
+| withdrawing outright | "withdrawing: the delegate calls withdraw" | `u105` |
+| withdrawing outright | "withdrawing: the delegate pulls the vault's tokens through the token contract" | the token's own `u4` |
+| withdrawing outright | "withdrawing: the delegate withdraws what it just unwound" | `u105` |
+
 ## Lifecycle tests
 
 These show the vault working rather than refusing an attack.
