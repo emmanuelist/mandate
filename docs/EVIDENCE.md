@@ -35,6 +35,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-030 | 2026-10-14 | v4 is on testnet: `npm run testnet` deployed it ([block 723,619](https://explorer.hiro.so/txid/0xeb74f75cb3eb9b7e3c13fb99f9f42b28af56124028967e316c8d4d8eab6b6cda?chain=testnet)) with its source identical to the repo, skipped the four contracts already there, set testnet sBTC's cap at 1,000,000 sats, and ran the lifecycle on v4 with the books reconciling. v3 stays on testnet as M1's record | `npm run testnet` and `npm run testnet:verify` (output below) | `c82b9ac`, `36ed855` |
 | E-031 | 2026-10-14 | The reference delegate moves funds without the owner signing. Holding only its own key, it ran five rounds on testnet against a mandate the owner granted it: two allocations and three unwinds, each signed by the delegate alone in deny mode, with post-conditions fixing what the vault sends and bounding what the venue pays back, and transfer events that match. The owner's only transactions were funding the delegate's fees, the allowlists, the deposit and the grant. Six tests cover its decisions, and the full suite passes: 134 tests in 21 files | [allocate](https://explorer.hiro.so/txid/0x6ee1c8463185dd56c29d1cdfbf4a6862826992c07d98570853edc391438a0176?chain=testnet) `(ok u20000)` · [unwind](https://explorer.hiro.so/txid/0x663709b37ae8d9f3ab499e46a5fb9bf2a86b017ee8cfe6392d369403fbe6c39c?chain=testnet) `(ok u10000)` · [allocate](https://explorer.hiro.so/txid/0xe131289dc88397c1e97ef610b046b09cd46cce98a275682b50a636851900df51?chain=testnet) `(ok u20000)` · [unwind](https://explorer.hiro.so/txid/0x80a7df02f0cb17cf4ca3767f8b52f07d781d1af2d1249fa3da8551c99661e9da?chain=testnet) `(ok u20000)` · [unwind](https://explorer.hiro.so/txid/0x5d5b85d71d51dff04f903dfd446799481c1af4053c13fbbb1f8032e033ab2d38?chain=testnet) `(ok u10000)`; `npm run testnet:verify`, 16 of 16 (output below) | `b2ea7b2`, `36ed855` |
 | E-032 | 2026-10-14 | The suites that touch only local contracts run without a fork. On `Clarinet-local.toml`, 93 tests in 5 files pass in about 3 s and send nothing to Hiro; where they used sBTC only as an asset nobody listed, a second local token stands in. The fork suite keeps 41 tests in 16 files. Before the change, CI runs hit Hiro's rate limit 12 to 24 times each | `npx vitest run --config vitest.local.config.ts`, seven runs, and `npx vitest run` (output below) | `b14618a` |
+| E-033 | 2026-10-14 | Invariants hold over random sequences. Two owners and two delegates take 400 random steps per seed across two tokens and every action. After every step the vault's tokens match the owners' idle balances, its venue shares match their positions, and no delegate's tokens grow, and every owner can always exit completely. The fixed seed reaches 26 successful allocations, 14 unwinds, 12 owner unwinds and 24 exits; three random seeds reached 25 to 49 allocations. A token sent to the vault at step 200, which the books don't record, fails the check at that step. The local suites pass: 95 tests in 6 files | `npx vitest run --config vitest.local.config.ts` (output below) | `68be905` |
 
 ### E-001 output
 ~~~text
@@ -634,4 +635,23 @@ $ npx vitest run        # the fork suite, without the local suites
       Tests  41 passed (41)
 rate-limit waits: 1
 exit 0 in 465 s
+~~~
+### E-033 output
+~~~text
+$ npx vitest run --config vitest.local.config.ts tests/v4-invariants.test.ts --silent=false --reporter=verbose
+  seed 20261014           : allocate ok 26, allocate refused 70, deposit ok 64, exit done 24, grant ok 50, haircut ok 23, owner-unwind ok 12, owner-unwind refused 12, revoke ok 24, time done 23, unwind ok 14, unwind refused 30, withdraw ok 16, withdraw refused 12
+  random seed 1684121889 (replay with INVARIANT_SEED=1684121889)
+  seed 1684121889           : allocate ok 29, allocate refused 76, deposit ok 64, exit done 28, grant ok 42, haircut ok 20, owner-unwind ok 9, owner-unwind refused 10, revoke ok 25, time done 28, unwind ok 17, unwind refused 20, withdraw ok 20, withdraw refused 12
+      Tests  2 passed (2)
+# two more runs: the fixed seed gave the same counts; random seeds 534980127 and 1142017011 reached 49 and 25 allocations
+
+# a throwaway mutant that sends the vault 1 token at step 200
+AssertionError: step 200 (allocate): vault's mock-token vs the owners' idle balances: expected 1 to be +0
+AssertionError: step 200 (deposit): vault's mock-token vs the owners' idle balances: expected 58709 to be 58708
+      Tests  2 failed (2)
+
+$ npx vitest run --config vitest.local.config.ts
+ Test Files  6 passed (6)
+      Tests  95 passed (95)
+in 6 s
 ~~~

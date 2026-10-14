@@ -157,7 +157,7 @@ API. Neither an API key nor the Clarinet CLI is required.
     npm ci
     npm test
 
-`npm test` runs two suites. The local suites, 93 tests in 5 files, touch only local
+`npm test` runs two suites. The local suites, 95 tests in 6 files, touch only local
 contracts and run in seconds without a network
 (`npx vitest run --config vitest.local.config.ts`). The fork suite, 41 tests in 16
 files, runs against a fork of Stacks mainnet at block 9,194,000 (`initial_height` in
@@ -253,7 +253,7 @@ To deploy an independent copy and run the same lifecycle:
       mandate-vault-v2.clar       Second version, retained with its tests
       mandate-probe-mainnet.clar  The minimal probe deployed on mainnet
       *probe.clar, venue-spike.clar   Exploratory contracts behind the venue findings
-    tests/                        134 tests in 21 files, 93 local and 41 on a mainnet fork, plus the Jing and testnet fork tests
+    tests/                        136 tests in 22 files, 95 local and 41 on a mainnet fork, plus the Jing and testnet fork tests
     scripts/                      Testnet deployment, execution and verification; the reference delegate; the specification check
     deployments/                  Testnet deployment records
     docs/                         Specification, plan, decisions, evidence and verified dependency facts
