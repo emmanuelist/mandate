@@ -125,3 +125,8 @@ clarity_version = 4
 path = "contracts/hostile-venue.clar"
 epoch = "latest"
 clarity_version = 4
+
+[contracts.sip-010-trait]
+path = "contracts/sip-010-trait.clar"
+epoch = "latest"
+clarity_version = 4

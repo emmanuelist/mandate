@@ -1,5 +1,5 @@
 ;; minimal SIP-010 so the ledger can be exercised in simnet
-(impl-trait 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.sip-010-trait-ft-standard-v-1-1.sip-010-trait)
+(impl-trait .sip-010-trait.sip-010-trait)
 (define-fungible-token mock)
 (define-constant ERR_NOT_OWNER (err u4))
 
