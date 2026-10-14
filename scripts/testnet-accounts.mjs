@@ -18,6 +18,9 @@ export function clarityVersionOf(name) {
 }
 
 export async function testnetAccounts() {
+  if (!fs.existsSync("settings/Testnet.toml")) {
+    throw new Error('No settings/Testnet.toml: create it with one line, mnemonic = "<a testnet-only seed>" (see the README)');
+  }
   const mnemonic = (fs.readFileSync("settings/Testnet.toml", "utf8")
     .match(/mnemonic\s*=\s*"([^"]+)"/) || [])[1];
   if (!mnemonic || mnemonic.includes("PASTE YOUR")) {
