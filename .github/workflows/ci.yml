@@ -75,12 +75,14 @@ jobs:
           cache: npm
       - run: npm ci
       # Under Hiro's rate limit the SDK sometimes fails a worker or a read. The forks are pinned, so a real failure fails
-      # every attempt and an infrastructure one doesn't (D-013).
+      # every attempt and an infrastructure one doesn't (D-013). A retry waits 60 s, longer than any wait Hiro has asked
+      # for, so it doesn't land in the same rate-limit window as the attempt it retries (D-015).
       - name: full suite (fork pinned at block 9194000), up to three attempts
         run: |
           for i in 1 2 3; do
             npx vitest run && exit 0
             echo "::warning::full suite attempt $i failed"
+            if [ "$i" -lt 3 ]; then sleep 60; fi
           done
           exit 1
       - name: Jing suite (fork pinned at block 9036500), up to three attempts
@@ -88,5 +90,6 @@ jobs:
           for i in 1 2 3; do
             npx vitest run --config vitest.jing.config.ts && exit 0
             echo "::warning::Jing suite attempt $i failed"
+            if [ "$i" -lt 3 ]; then sleep 60; fi
           done
           exit 1
