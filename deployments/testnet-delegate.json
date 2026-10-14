@@ -1,0 +1,49 @@
+{
+  "network": "testnet",
+  "delegate": "ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6",
+  "owner": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+  "vault": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v4",
+  "venue": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc",
+  "asset": "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token",
+  "limits": {
+    "maxNotional": 20000,
+    "expires": 28284,
+    "maxSlipBps": 100,
+    "maxTrades": 10,
+    "windowLen": 144,
+    "maxDaily": 200000,
+    "maxCumSlipBps": 10000
+  },
+  "ownerSteps": [
+    {
+      "label": "fund the delegate's fees: 2 STX",
+      "txid": "0x83d3d9689db4677bb4b7037dc144dd3a307592f1d171ed7861960ddfa70e48cc",
+      "block": 723640,
+      "result": "(ok true)"
+    },
+    {
+      "label": "owner allowlists testnet sBTC",
+      "txid": "0xc77202494068051c5d1c8e6b42a5d4e4671c7e00ae2d302b193c4cf591f5e453",
+      "block": 723642,
+      "result": "(ok true)"
+    },
+    {
+      "label": "owner allowlists the venue",
+      "txid": "0xc2aa45cf2f9ba87e7f39180cee61c1ffe85ffde9532d452bcca12ec31fe004f6",
+      "block": 723643,
+      "result": "(ok true)"
+    },
+    {
+      "label": "owner deposits 40,000 sats",
+      "txid": "0x0c7a2acf6b867d558e4fab912693f93f64f535708cdd88f64fa3a53855ffa697",
+      "block": 723646,
+      "result": "(ok true)"
+    },
+    {
+      "label": "owner grants the delegate",
+      "txid": "0xf0f436614676bbcf9c476162aa8d1c2ef11ca128d5f38bc309b64c1e345b5754",
+      "block": 723648,
+      "result": "(ok true)"
+    }
+  ]
+}

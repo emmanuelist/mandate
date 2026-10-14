@@ -1,0 +1,72 @@
+{
+  "network": "testnet",
+  "delegate": "ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6",
+  "owner": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+  "rounds": [
+    {
+      "at": "2026-10-14T10:32:29.939Z",
+      "burn": 27277,
+      "targetBps": 7500,
+      "idle": "40000",
+      "value": "0",
+      "action": "allocate",
+      "why": "below target: 0 of 30000",
+      "txid": "0x6ee1c8463185dd56c29d1cdfbf4a6862826992c07d98570853edc391438a0176",
+      "block": 723654,
+      "result": "(ok u20000)",
+      "amount": "20000"
+    },
+    {
+      "at": "2026-10-14T10:32:43.850Z",
+      "burn": 27277,
+      "targetBps": 2500,
+      "idle": "20000",
+      "value": "20000",
+      "action": "unwind",
+      "why": "above target: 20000 of 10000",
+      "txid": "0x663709b37ae8d9f3ab499e46a5fb9bf2a86b017ee8cfe6392d369403fbe6c39c",
+      "block": 723658,
+      "result": "(ok u10000)",
+      "shares": "10000"
+    },
+    {
+      "at": "2026-10-14T10:32:57.755Z",
+      "burn": 27277,
+      "targetBps": 7500,
+      "idle": "30000",
+      "value": "10000",
+      "action": "allocate",
+      "why": "below target: 10000 of 30000",
+      "txid": "0xe131289dc88397c1e97ef610b046b09cd46cce98a275682b50a636851900df51",
+      "block": 723660,
+      "result": "(ok u20000)",
+      "amount": "20000"
+    },
+    {
+      "at": "2026-10-14T10:33:11.418Z",
+      "burn": 27277,
+      "targetBps": 2500,
+      "idle": "10000",
+      "value": "30000",
+      "action": "unwind",
+      "why": "above target: 30000 of 10000",
+      "txid": "0x80a7df02f0cb17cf4ca3767f8b52f07d781d1af2d1249fa3da8551c99661e9da",
+      "block": 723662,
+      "result": "(ok u20000)",
+      "shares": "20000"
+    },
+    {
+      "at": "2026-10-14T10:33:26.096Z",
+      "burn": 27277,
+      "targetBps": 0,
+      "idle": "30000",
+      "value": "10000",
+      "action": "unwind",
+      "why": "above target: 10000 of 0",
+      "txid": "0x5d5b85d71d51dff04f903dfd446799481c1af4053c13fbbb1f8032e033ab2d38",
+      "block": 723664,
+      "result": "(ok u10000)",
+      "shares": "10000"
+    }
+  ]
+}
