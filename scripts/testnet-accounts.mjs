@@ -8,6 +8,15 @@ import { generateWallet, generateNewAccount, getStxAddress } from "@stacks/walle
 
 export const API = "https://api.testnet.hiro.so";
 
+// The Clarity version Clarinet.toml gives a contract, so testnet runs what the tests run.
+export function clarityVersionOf(name) {
+  const section = fs.readFileSync("Clarinet.toml", "utf8").split(/^\[/m)
+    .find((s) => s.startsWith(`contracts.${name}]`));
+  const version = Number(section?.match(/^clarity_version\s*=\s*(\d+)/m)?.[1]);
+  if (!version) throw new Error(`Clarinet.toml gives no clarity_version for ${name}`);
+  return version;
+}
+
 export async function testnetAccounts() {
   const mnemonic = (fs.readFileSync("settings/Testnet.toml", "utf8")
     .match(/mnemonic\s*=\s*"([^"]+)"/) || [])[1];

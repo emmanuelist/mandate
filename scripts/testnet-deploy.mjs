@@ -1,34 +1,34 @@
 // Deploys Mandate's M1 contracts to Stacks testnet from account 1, in dependency
-// order, confirming each before the next. Contracts already deployed are skipped,
-// so after a testnet reset the same command rebuilds everything (#7).
-// Writes deployments/testnet.json.
+// order, confirming each before the next. A contract already deployed with the
+// repo's source is skipped, so after a testnet reset the same command rebuilds
+// everything (#7). Writes deployments/testnet.json.
 import fs from "node:fs";
-import { makeContractDeploy, ClarityVersion, fetchNonce } from "@stacks/transactions";
-import { testnetAccounts, broadcast, waitFor, API } from "./testnet-accounts.mjs";
+import { makeContractDeploy, fetchNonce } from "@stacks/transactions";
+import { testnetAccounts, broadcast, waitFor, API, clarityVersionOf } from "./testnet-accounts.mjs";
 
-// Clarity versions match Clarinet.toml, so testnet runs what the tests run.
-const CONTRACTS = [
-  ["sip-010-trait", ClarityVersion.Clarity4],
-  ["venue-trait", ClarityVersion.Clarity4],
-  ["mock-token", ClarityVersion.Clarity3],
-  ["mock-venue", ClarityVersion.Clarity4],
-  ["mandate-vault-v3", ClarityVersion.Clarity4],
-];
+const CONTRACTS = ["sip-010-trait", "venue-trait", "mock-token", "mock-venue", "mandate-vault-v3"];
 
 const [owner] = await testnetAccounts();
 const record = { network: "testnet", deployer: owner.address, contracts: {} };
 console.log(`deployer ${owner.address}`);
-for (const [name, clarityVersion] of CONTRACTS) {
+for (const name of CONTRACTS) {
   const id = `${owner.address}.${name}`;
+  const source = fs.readFileSync(`contracts/${name}.clar`, "utf8");
+  const clarityVersion = clarityVersionOf(name);
   const existing = await fetch(`${API}/extended/v1/contract/${id}`).then((r) => (r.ok ? r.json() : null));
   if (existing?.tx_id) {
-    console.log(`  ${name.padEnd(17)} already deployed   ${existing.tx_id}`);
+    // Deployed code can't change, and a run against an older deployment would prove
+    // the wrong code, so stop rather than skip it.
+    if (existing.source_code !== source || existing.clarity_version !== clarityVersion) {
+      throw new Error(`${id} was deployed from a different contracts/${name}.clar: deploy from a fresh testnet account`);
+    }
+    console.log(`  ${name.padEnd(17)} already deployed, identical to the repo   ${existing.tx_id}`);
     record.contracts[name] = { id, txid: existing.tx_id, block: existing.block_height };
     continue;
   }
   const nonce = await fetchNonce({ address: owner.address, network: "testnet" });
   const tx = await makeContractDeploy({
-    contractName: name, codeBody: fs.readFileSync(`contracts/${name}.clar`, "utf8"),
+    contractName: name, codeBody: source,
     clarityVersion, senderKey: owner.key, network: "testnet", nonce, fee: 500_000n,
   });
   const txid = await broadcast(tx, name);

@@ -6,7 +6,8 @@
   "scripts": {
     "test": "vitest run",
     "testnet": "node scripts/testnet-deploy.mjs && node scripts/testnet-e2e.mjs",
-    "testnet:accounts": "node scripts/testnet-accounts.mjs"
+    "testnet:accounts": "node scripts/testnet-accounts.mjs",
+    "testnet:verify": "node scripts/testnet-verify.mjs"
   },
   "dependencies": {
     "@stacks/clarinet-sdk": "^3.9.0",
