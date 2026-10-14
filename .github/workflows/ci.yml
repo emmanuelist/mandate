@@ -63,6 +63,40 @@ jobs:
           node-version: 26
       - run: node scripts/spec-crosscheck.mjs
 
+  static:
+    name: static checks against the review log
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      # Clarinet's CLI, pinned by version and by the archive's SHA-256, which matches the
+      # release's own checksums.txt
+      - name: install Clarinet 3.24.1
+        env:
+          URL: https://github.com/hirosystems/clarinet/releases/download/v3.24.1/clarinet-linux-x64-glibc.tar.gz
+          SHA256: 2f77903d3af5046df5730c23d4451b03ddd56c7206efd466a5a7f6acab376c75
+        run: |
+          set -eu
+          curl -fsSL "$URL" -o clarinet.tar.gz
+          echo "$SHA256  clarinet.tar.gz" | sha256sum -c -
+          mkdir -p "$HOME/bin"
+          tar -xzf clarinet.tar.gz -C "$HOME/bin" clarinet
+          rm clarinet.tar.gz
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          "$HOME/bin/clarinet" --version
+      # clarinet check fetches the manifests' requirements from Hiro's API, so it gets the
+      # suites' three attempts a minute apart (D-015)
+      - name: every manifest checks, and every warning is in docs/REVIEW.md, up to three attempts
+        run: |
+          for i in 1 2 3; do
+            node scripts/static-check.mjs && exit 0
+            echo "::warning::static checks attempt $i failed"
+            if [ "$i" -lt 3 ]; then sleep 60; fi
+          done
+          exit 1
+
   tests:
     name: clarinet tests (mainnet and testnet forks)
     runs-on: ubuntu-latest

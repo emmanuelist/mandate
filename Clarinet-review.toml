@@ -1,0 +1,47 @@
+# The contracts that go to mainnet, under Clarinet's taint analysis as well as its
+# type checks and lints (#37). No tests run on this manifest.
+# Run: node scripts/static-check.mjs, which checks every manifest against docs/REVIEW.md
+[project]
+name = "mandate-review"
+description = "The contracts that go to mainnet, for the static checks"
+authors = []
+telemetry = false
+cache_dir = "./.cache"
+
+[[project.requirements]]
+contract_id = "SPSX722NK9V3A8D3CVQT0CDY4EBQ3E9FSDDE61FT.liquidity-provider-v1"
+
+[[project.requirements]]
+contract_id = "SP3M2BYF7RGF8WKW5FVDNJ6WR8D7AR9BHDXAKPXZE.state-v1"
+
+[[project.requirements]]
+contract_id = "SP3M2BYF7RGF8WKW5FVDNJ6WR8D7AR9BHDXAKPXZE.math-v1"
+
+[[project.requirements]]
+contract_id = "SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx"
+
+[contracts.sip-010-trait]
+path = "contracts/sip-010-trait.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.venue-trait]
+path = "contracts/venue-trait.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.mandate-vault-v5]
+path = "contracts/mandate-vault-v5.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.granite-venue]
+path = "contracts/granite-venue.clar"
+epoch = "latest"
+clarity_version = 4
+
+[repl.analysis]
+passes = ["check_checker"]
+# callee_filter stays off: on, Clarinet 3.24.1 reports a different set of warnings
+# from run to run (14 or 19 on v5 over ten runs); off, the same 26 every time
+check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
