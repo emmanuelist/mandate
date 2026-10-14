@@ -143,6 +143,21 @@ path = "contracts/mandate-vault-v4.clar"
 epoch = "latest"
 clarity_version = 4
 
+[contracts.mandate-vault-v5]
+path = "contracts/mandate-vault-v5.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.reentrant-venue]
+path = "contracts/reentrant-venue.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.reentrant-venue-v4]
+path = "contracts/reentrant-venue-v4.clar"
+epoch = "latest"
+clarity_version = 4
+
 [contracts.granite-venue]
 path = "contracts/granite-venue.clar"
 epoch = "latest"
@@ -158,8 +173,8 @@ path = "contracts/phisher-v3.clar"
 epoch = "latest"
 clarity_version = 4
 
-[contracts.phisher-v4]
-path = "contracts/phisher-v4.clar"
+[contracts.phisher-v5]
+path = "contracts/phisher-v5.clar"
 epoch = "latest"
 clarity_version = 4
 

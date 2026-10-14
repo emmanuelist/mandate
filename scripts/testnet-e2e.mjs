@@ -24,7 +24,7 @@ const venue = Cl.contractPrincipal(D, "mock-venue-sbtc");
 const info = await fetch(`${API}/v2/info`).then((r) => r.json());
 const expires = info.burn_block_height + 1008; // about a week of Bitcoin blocks
 const run = { network: "testnet", asset: `${SBTC.address}.${SBTC.name}`, owner: D, delegate: delegate.address,
-  vault: `${D}.mandate-vault-v4`, venue: `${D}.mock-venue-sbtc`, steps: [] };
+  vault: `${D}.mandate-vault-v5`, venue: `${D}.mock-venue-sbtc`, steps: [] };
 
 async function step(label, from, txFn) {
   const nonce = await fetchNonce({ address: from.address, network: "testnet" });
@@ -36,7 +36,7 @@ async function step(label, from, txFn) {
   run.steps.push({ label, from: from.address, txid, block, result });
 }
 const call = (fn, args, from) => (nonce) => makeContractCall({
-  contractAddress: D, contractName: "mandate-vault-v4", functionName: fn, functionArgs: args,
+  contractAddress: D, contractName: "mandate-vault-v5", functionName: fn, functionArgs: args,
   senderKey: from.key, network: "testnet", nonce, fee: 100_000n,
   // The vault bounds its own outflows with as-contract? allowances, which is what
   // this run shows; wallet post-conditions are a separate client-side protection.

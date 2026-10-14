@@ -1,7 +1,7 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
 
-// mandate-vault-v4 and the testnet sBTC venue against testnet's official sBTC, on
+// mandate-vault-v5 and the testnet sBTC venue against testnet's official sBTC, on
 // a testnet fork pinned at block 719800 (Clarinet-testnet.toml). The same pairing
 // runs on testnet itself (#26).
 const SBTC_ADDR = "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1";
@@ -10,7 +10,7 @@ const SBTC = `${SBTC_ADDR}.sbtc-token`;
 
 const dep = simnet.deployer;
 const agentX = simnet.getAccounts().get("wallet_3")!;
-const V = "mandate-vault-v4";
+const V = "mandate-vault-v5";
 const VAULT = `${dep}.${V}`;
 const VENUE = `${dep}.mock-venue-sbtc`;
 const AMT = 100_000;

@@ -1,7 +1,7 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
 
-// v4 against a deterministic venue (contracts/mock-venue.clar). The real-Zest
+// v5 against a deterministic venue (contracts/mock-venue.clar). The real-Zest
 // path is the fork test for #5; the call pattern itself is proven in
 // tests/venue-spike.test.ts.
 const a = simnet.getAccounts();
@@ -9,7 +9,7 @@ const dep = simnet.deployer;
 const alice = a.get("wallet_1")!, bob = a.get("wallet_2")!;
 const agentX = a.get("wallet_3")!;
 const mallory = bob; // the stranger, wallet_2 as in the v2 tests; no test needs both
-const V = "mandate-vault-v4";
+const V = "mandate-vault-v5";
 const MOCK = `${dep}.mock-token`;
 const VENUE = `${dep}.mock-venue`;
 const VAULT = `${dep}.${V}`;
@@ -52,7 +52,7 @@ const unwind = (owner: string, shares: number, by = agentX) =>
 const ownerUnwind = (owner: string, shares: number, minOut = 1) =>
   simnet.callPublicFn(V, "owner-unwind", [venue(), mock(), Cl.uint(shares), Cl.uint(minOut)], owner);
 
-describe("v4: the delegate allocates through a venue", () => {
+describe("v5: the delegate allocates through a venue", () => {
   it("allocates idle assets into the venue, unwinds them, and the owner withdraws everything", () => {
     setup();
     grant(alice, agentX);
@@ -82,7 +82,7 @@ describe("v4: the delegate allocates through a venue", () => {
   });
 });
 
-describe("v4 policy: every v2 limit applies to allocate", () => {
+describe("v5 policy: every v2 limit applies to allocate", () => {
   it("refuses a caller with no mandate", () => {
     setup();
     expect(allocate(alice, 1_000).result).toBeErr(Cl.uint(100));      // ERR_NO_MANDATE
@@ -127,7 +127,7 @@ describe("v4 policy: every v2 limit applies to allocate", () => {
   });
 });
 
-describe("v4 slippage: the floor comes from the venue's quote, not the delegate", () => {
+describe("v5 slippage: the floor comes from the venue's quote, not the delegate", () => {
   it("refuses a fill worse than the mandate's slippage, and nothing moves", () => {
     setup(); grant(alice, agentX, { slip: 100 });
     simnet.callPublicFn("mock-venue", "set-haircut", [Cl.uint(200)], dep);   // 2% worse than quoted
@@ -147,7 +147,7 @@ describe("v4 slippage: the floor comes from the venue's quote, not the delegate"
   });
 });
 
-describe("v4 keeps v2's fixes, ported to the new entry points", () => {
+describe("v5 keeps v2's fixes, ported to the new entry points", () => {
   it("revoking can't strand funds: the owner unwinds and withdraws without a mandate", () => {
     setup(); grant(alice, agentX);
     allocate(alice, 100_000);
@@ -191,7 +191,7 @@ describe("v4 keeps v2's fixes, ported to the new entry points", () => {
   });
 });
 
-describe("v4 grant parameters", () => {
+describe("v5 grant parameters", () => {
   const raw = (win: number, slip: number, cum: number) =>
     simnet.callPublicFn(V, "grant", [Cl.principal(agentX), Cl.uint(500_000), Cl.uint(9_999_999),
       Cl.uint(slip), Cl.uint(100), Cl.uint(win), Cl.uint(10_000_000), Cl.uint(cum)], alice);
@@ -215,7 +215,7 @@ describe("v4 grant parameters", () => {
   });
 });
 
-describe("v4 positions", () => {
+describe("v5 positions", () => {
   it("a position keeps the asset it was opened with", () => {
     setup(); grant(alice, agentX);
     allocate(alice, 10_000);
@@ -248,7 +248,7 @@ describe("v4 positions", () => {
   });
 });
 
-describe("v4: reading a mandate", () => {
+describe("v5: reading a mandate", () => {
   it("mandate-of: anyone can read the limits an owner granted, and none once revoked", () => {
     setup();
     grant(alice, agentX, { cap: 123_000 });
@@ -261,7 +261,7 @@ describe("v4: reading a mandate", () => {
   });
 });
 
-describe("v4: the per-vault AUM cap", () => {
+describe("v5: the per-vault AUM cap", () => {
   const capOf = () => ro("cap-of", [Cl.principal(MOCK)]);
   const aumOf = () => ro("aum-of", [Cl.principal(MOCK)]);
   const ready = (who: string) => {

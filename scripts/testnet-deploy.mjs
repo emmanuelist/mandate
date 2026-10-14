@@ -35,15 +35,15 @@ for (const name of testnetContracts()) {
   console.log(`block ${block}`);
   record.contracts[name] = { id, txid, block };
 }
-// v4 refuses deposits of an asset without a cap, so the deployer sets testnet
+// The vault refuses deposits of an asset without a cap, so the deployer sets testnet
 // sBTC's once, at mainnet's 1,000,000 sats (D-018). Nothing can change it after.
-if (record.contracts["mandate-vault-v4"]) {
+if (record.contracts["mandate-vault-v5"]) {
   const asset = `${SBTC.address}.${SBTC.name}`;
-  const cap = Cl.prettyPrint(await fetchCallReadOnlyFunction({ contractAddress: owner.address, contractName: "mandate-vault-v4",
+  const cap = Cl.prettyPrint(await fetchCallReadOnlyFunction({ contractAddress: owner.address, contractName: "mandate-vault-v5",
     functionName: "cap-of", functionArgs: [Cl.principal(asset)], senderAddress: owner.address, network: "testnet" }));
   if (cap === "u0") {
     const nonce = await fetchNonce({ address: owner.address, network: "testnet" });
-    const tx = await makeContractCall({ contractAddress: owner.address, contractName: "mandate-vault-v4", functionName: "set-cap",
+    const tx = await makeContractCall({ contractAddress: owner.address, contractName: "mandate-vault-v5", functionName: "set-cap",
       functionArgs: [Cl.principal(asset), Cl.uint(1_000_000)], senderKey: owner.key, network: "testnet", nonce, fee: 100_000n,
       postConditionMode: PostConditionMode.Deny });
     const txid = await broadcast(tx, "set-cap");

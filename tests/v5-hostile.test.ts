@@ -1,13 +1,13 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
 
-// v4 against contracts/hostile-venue.clar, a venue that misbehaves on purpose.
+// v5 against contracts/hostile-venue.clar, a venue that misbehaves on purpose.
 // Each attack must be refused with nothing moved: idle balances, positions and
 // the vault's real token balance all unchanged.
 const a = simnet.getAccounts();
 const dep = simnet.deployer;
 const alice = a.get("wallet_1")!, bob = a.get("wallet_2")!, agentX = a.get("wallet_3")!;
-const V = "mandate-vault-v4";
+const V = "mandate-vault-v5";
 const MOCK = `${dep}.mock-token`;
 const HOSTILE = `${dep}.hostile-venue`;
 const VAULT = `${dep}.${V}`;
@@ -38,7 +38,7 @@ const ownerUnwind = (who: string, n: number) =>
   simnet.callPublicFn(V, "owner-unwind", [hostile(), mock(), Cl.uint(n), Cl.uint(1)], who);
 const snap = () => [idle(alice), pos(alice), vaultTokens(), vaultShares()].join(" | ");
 
-describe("v4 against a hostile venue: measure, don't trust", () => {
+describe("v5 against a hostile venue: measure, don't trust", () => {
   it("control: the same venue behaving honestly passes every check", () => {
     owner(alice); mode(0);
     expect(allocate(alice, 10_000).result).toBeOk(Cl.uint(10_000));
@@ -66,7 +66,7 @@ describe("v4 against a hostile venue: measure, don't trust", () => {
     owner(alice); mode(4);
     const before = snap(); const r = allocate(alice, 10_000);
     console.log("  re-enters the vault      :", pp(r.result), "|", snap());
-    expect(r.result).toBeErr(Cl.uint(105));   // ran as the vault itself, which has no ledger
+    expect(r.result).toBeErr(Cl.uint(120));   // the vault is closed while a venue runs (#48)
     expect(snap()).toBe(before);
   });
 

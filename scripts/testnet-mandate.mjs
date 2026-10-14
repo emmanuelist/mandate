@@ -1,5 +1,5 @@
 // The owner's side of the reference delegate's testnet run (#33): fund a mandate in
-// v4 with testnet sBTC and grant it to the delegate whose address
+// the vault with testnet sBTC and grant it to the delegate whose address
 // deployments/testnet-delegate.json holds, and give that delegate STX for fees.
 // The owner, account 1 of settings/Testnet.toml, never sees the delegate's key.
 // Adds the mandate's details to deployments/testnet-delegate.json.
@@ -13,7 +13,7 @@ const cfg = JSON.parse(fs.readFileSync(record, "utf8"));
 if (!cfg.delegate) throw new Error(`no delegate address in ${record}: run npm run delegate:key -- testnet`);
 const [owner] = await testnetAccounts();
 const D = owner.address;
-const vault = `${D}.mandate-vault-v4`, venue = `${D}.mock-venue-sbtc`, asset = `${SBTC.address}.${SBTC.name}`;
+const vault = `${D}.mandate-vault-v5`, venue = `${D}.mock-venue-sbtc`, asset = `${SBTC.address}.${SBTC.name}`;
 if ((await sbtcBalance(D)) < DEPOSIT) throw new Error(`account 1 needs ${DEPOSIT} sats of testnet sBTC: see the README`);
 
 async function step(label, txFn) {
@@ -26,7 +26,7 @@ async function step(label, txFn) {
   return { label, txid, block, result };
 }
 const call = (fn, args) => (nonce) => makeContractCall({
-  contractAddress: D, contractName: "mandate-vault-v4", functionName: fn, functionArgs: args,
+  contractAddress: D, contractName: "mandate-vault-v5", functionName: fn, functionArgs: args,
   senderKey: owner.key, network: "testnet", nonce, fee: 100_000n, postConditionMode: PostConditionMode.Allow,
 });
 

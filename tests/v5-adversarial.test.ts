@@ -1,19 +1,20 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
 
-// The adversarial suite (#30): a delegate, and the people around it, attempting
-// every attack the mandate exists to stop. Each case asserts the exact refusal,
+// The adversarial suite (#30): a delegate, and the people around it, including a
+// venue that calls back in (#48), attempting every attack the mandate exists to stop. Each case asserts the exact refusal,
 // that the call emitted no asset events, and that no balance anywhere changed.
 const a = simnet.getAccounts();
 const dep = simnet.deployer;
 const alice = a.get("wallet_1")!, bob = a.get("wallet_2")!;
 const agentX = a.get("wallet_3")!;
-const V = "mandate-vault-v4";
+const V = "mandate-vault-v5";
 const VAULT = `${dep}.${V}`;
 const MOCK = `${dep}.mock-token`;
 const VENUE = `${dep}.mock-venue`;
 const HOSTILE = `${dep}.hostile-venue`;
 const PHISH = `${dep}.phish-venue`;
+const REENTRANT = `${dep}.reentrant-venue`;
 const OTHER = `${dep}.mock-token-b`; // an asset nobody allowlisted
 
 const pp = (r: any) => Cl.prettyPrint(r);
@@ -33,6 +34,10 @@ const snapshot = () => ({
   alicePos: ro("shares-of", [Cl.principal(alice), Cl.principal(VENUE)]),
   bobPos: ro("shares-of", [Cl.principal(bob), Cl.principal(VENUE)]),
   vaultShares: pp(simnet.callReadOnlyFn("mock-venue", "get-balance", [Cl.principal(VAULT)], dep).result),
+  reentrant: tokenOf(REENTRANT),
+  reentrantIdle: ro("balance-of", [Cl.principal(REENTRANT), Cl.principal(MOCK)]),
+  aliceReentrantPos: ro("shares-of", [Cl.principal(alice), Cl.principal(REENTRANT)]),
+  vaultReentrantShares: pp(simnet.callReadOnlyFn("reentrant-venue", "shares-held", [Cl.principal(VAULT)], dep).result),
 });
 
 function refused(code: number, attack: () => { result: any; events: any[] }) {
@@ -254,5 +259,96 @@ describe("adversarial: withdrawing outright", () => {
   it("withdrawing: the delegate withdraws what it just unwound", () => {
     world(); allocate(alice, 50_000); unwind(alice, 50_000);
     refused(105, () => call("withdraw", [mock(), Cl.uint(50_000)], agentX));
+  });
+});
+
+// A venue alice listed calls back into the vault mid-call (#48), as the venue
+// itself, with one of seven calls at one of five points. The vault is closed while
+// allocate, unwind or owner-unwind runs, so each call back is refused before
+// anything else is checked. Where the venue passes the refusal on from a read or a
+// quote, the vault reports its own failed-read code, u109. A call back into the
+// very function that is running never reaches the vault: Clarity's runtime aborts
+// the whole transaction as a circular reference.
+const HOOK = { deposit: 1, redeem: 2, read: 3, shareQuote: 4, assetQuote: 5 };
+const ACT = { deposit: 1, withdraw: 2, allocate: 3, unwind: 4, exit: 5, grant: 6, list: 7 };
+const reVenue = () => venue("reentrant-venue");
+function reWorld(position = false) {
+  world();
+  call("allow-venue", [Cl.principal(REENTRANT), Cl.principal(MOCK)], alice);
+  simnet.callPublicFn("mock-token", "mint", [Cl.uint(100_000), Cl.principal(REENTRANT)], dep);
+  expect(simnet.callPublicFn("reentrant-venue", "setup", [], dep).result).toBeOk(Cl.bool(true));
+  if (position) expect(allocate(alice, 50_000, agentX, reVenue()).result).toBeOk(Cl.uint(50_000));
+}
+const arm = (hook: number, act: number, amount: number, owner = alice) =>
+  simnet.callPublicFn("reentrant-venue", "arm", [Cl.uint(hook), Cl.uint(act), Cl.uint(amount), Cl.principal(owner), Cl.bool(true)], dep);
+const unwindRe = () => unwind(alice, 50_000, agentX, reVenue());
+function aborted(fn: string, attack: () => any) {
+  const before = snapshot();
+  let thrown = "";
+  try { attack(); } catch (e) { thrown = String(e); }
+  expect(thrown).toContain(`RuntimeCheck(CircularReference(["${VAULT}:${fn}"]))`);
+  expect(snapshot()).toEqual(before);
+}
+
+describe("adversarial: re-entry", () => {
+  it("re-entry: a venue deposits its own tokens while paying out the delegate's unwind", () => {
+    reWorld(true); arm(HOOK.redeem, ACT.deposit, 50_000);
+    refused(120, unwindRe);
+  });
+  it("re-entry: a venue deposits its own tokens while paying out the owner's unwind", () => {
+    reWorld(true); arm(HOOK.redeem, ACT.deposit, 50_000);
+    refused(120, () => call("owner-unwind", [reVenue(), mock(), Cl.uint(50_000), Cl.uint(0)], alice));
+  });
+  it("re-entry: a venue withdraws an idle balance of its own while paying out an unwind", () => {
+    reWorld(true); arm(HOOK.redeem, ACT.withdraw, 1);
+    refused(120, unwindRe);
+  });
+  it("re-entry: a venue unwinds an owner's position elsewhere while paying out the owner's unwind", () => {
+    reWorld(true); allocate(alice, 50_000); grant(alice, REENTRANT); arm(HOOK.redeem, ACT.unwind, 50_000);
+    refused(120, () => call("owner-unwind", [reVenue(), mock(), Cl.uint(50_000), Cl.uint(0)], alice));
+  });
+  it("re-entry: a venue exits a position of its own elsewhere while paying out an unwind", () => {
+    reWorld(true); arm(HOOK.redeem, ACT.exit, 1);
+    refused(120, unwindRe);
+  });
+  it("re-entry: a venue grants a mandate while paying out an unwind", () => {
+    reWorld(true); arm(HOOK.redeem, ACT.grant, 0, agentX);
+    refused(120, unwindRe);
+  });
+  it("re-entry: a venue deposits its own tokens while taking an allocation", () => {
+    reWorld(); arm(HOOK.deposit, ACT.deposit, 50_000);
+    refused(120, () => allocate(alice, 10_000, agentX, reVenue()));
+  });
+  it("re-entry: a venue allocates an owner's funds elsewhere while paying out an unwind", () => {
+    reWorld(true); grant(alice, REENTRANT); arm(HOOK.redeem, ACT.allocate, 10_000);
+    refused(120, unwindRe);
+  });
+  it("re-entry: a venue lists a venue for itself while taking an allocation", () => {
+    reWorld(); arm(HOOK.deposit, ACT.list, 0);
+    refused(120, () => allocate(alice, 10_000, agentX, reVenue()));
+  });
+  it("re-entry: a venue deposits from the balance read after an unwind", () => {
+    reWorld(true); arm(HOOK.read, ACT.deposit, 50_000);
+    refused(109, unwindRe);
+  });
+  it("re-entry: a venue deposits from the balance read after an allocation", () => {
+    reWorld(); arm(HOOK.read, ACT.deposit, 50_000);
+    refused(109, () => allocate(alice, 10_000, agentX, reVenue()));
+  });
+  it("re-entry: a venue deposits from its share quote, before an allocation", () => {
+    reWorld(); arm(HOOK.shareQuote, ACT.deposit, 50_000);
+    refused(109, () => allocate(alice, 10_000, agentX, reVenue()));
+  });
+  it("re-entry: a venue deposits from its asset quote, before an unwind", () => {
+    reWorld(true); arm(HOOK.assetQuote, ACT.deposit, 50_000);
+    refused(109, unwindRe);
+  });
+  it("re-entry: a venue calls allocate from inside allocate, which Clarity aborts, and nothing moves", () => {
+    reWorld(); grant(alice, REENTRANT); arm(HOOK.deposit, ACT.allocate, 10_000);
+    aborted("allocate", () => allocate(alice, 10_000, agentX, reVenue()));
+  });
+  it("re-entry: a venue calls unwind from inside unwind, which Clarity aborts, and nothing moves", () => {
+    reWorld(true); allocate(alice, 50_000); grant(alice, REENTRANT); arm(HOOK.redeem, ACT.unwind, 50_000);
+    aborted("unwind", unwindRe);
   });
 });

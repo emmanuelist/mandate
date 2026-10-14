@@ -1,7 +1,7 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
 
-// mandate-vault-v4 against Granite's real USDCx lending pool on a mainnet fork,
+// mandate-vault-v5 against Granite's real USDCx lending pool on a mainnet fork,
 // through contracts/granite-venue.clar, which holds Granite's LP tokens and mints
 // its own shares (D-020).
 const USDCX_ADDR = "SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE";
@@ -11,7 +11,7 @@ const USDCX = `${USDCX_ADDR}.usdcx`;
 
 const dep = simnet.deployer;
 const agentX = simnet.getAccounts().get("wallet_3")!;
-const V = "mandate-vault-v4";
+const V = "mandate-vault-v5";
 const VAULT = `${dep}.${V}`;
 const ADAPTER = `${dep}.granite-venue`;
 const CAP = 1_000_000_000; // 1,000 USDCx, the mainnet cap (D-020)
@@ -41,7 +41,7 @@ function setup(opts: Partial<{ cap: number }> = {}) {
 const allocate = (amount = AMT) =>
   simnet.callPublicFn(V, "allocate", [Cl.principal(OWNER), venue(), usdcx(), Cl.uint(amount)], agentX);
 
-describe("v4 against Granite's USDCx lending pool on a mainnet fork, through the adapter", () => {
+describe("v5 against Granite's USDCx lending pool on a mainnet fork, through the adapter", () => {
   it("Granite: deposit, allocate, unwind, withdraw: every unit accounted for", () => {
     const walletStart = usdcxOf(OWNER);
     setup();

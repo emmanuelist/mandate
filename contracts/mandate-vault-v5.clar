@@ -1,0 +1,339 @@
+;; mandate-vault-v5 -- v4, closed to calls back in while a venue runs
+;;
+;; v5 is v4 with one fix (#48). A venue runs code the vault doesn't control, and
+;; Clarity lets that code call back into the vault. In v4 a venue paying out a
+;; redeem could deposit its own tokens into the vault, as itself, from the redeem
+;; or from the balance read that follows it. The deposit credited the venue, and
+;; the unwind counted the same tokens as the venue's payout and credited them to
+;; the owner as well, so an owner who listed their own venue could drain the
+;; vault's other owners.
+;;
+;; So while allocate, unwind or owner-unwind runs, the vault is closed: every
+;; function that writes refuses with ERR_REENTRY, whoever calls it. The bodies of
+;; those three are v4's, unchanged, in allocate-closed, unwind-closed and
+;; exit-position.
+;;
+;; v4's notes follow.
+;;
+;; v4 is v3 with one addition: the vault's principal in each asset, across all
+;; owners, can't exceed a cap. The deployer sets each asset's cap once, and
+;; nothing can change it after that, so the most the vault can ever hold is
+;; fixed and readable on-chain. Raising a cap means a new deployment, after an
+;; audit (D-008). An asset without a cap can't be deposited. Principal counts
+;; deposits less withdrawals: funds in a venue are still under management, and
+;; withdrawals that include yield free no more room than they took.
+;;
+;; Callers are identified by contract-caller, the principal that called the
+;; vault directly, never by tx-sender. tx-sender passes through every contract an
+;; owner calls, so in v3 such a contract could act as the owner: allowlist its own
+;; venue, grant the owner a mandate and allocate the owner's funds into it (#40).
+;; Here a contract the owner calls acts only on its own books. A contract acting
+;; for itself, such as a multisig owner, calls from inside as-contract?.
+;;
+;; v3's notes follow.
+;;
+;; Carries every fix and limit from v2 (its header, and docs/EVIDENCE.md E-007).
+;; What changes: the delegate no longer swaps on a DEX. It allocates the owner's
+;; idle assets into a yield venue and unwinds them, through the venue trait in
+;; venue-trait.clar. Zest's v0 vaults satisfy that trait as deployed, so the
+;; vault is Zest's contract-caller: it pays for itself and holds its own shares,
+;; with no adapter in between.
+;;
+;; Positions remember their asset, so the owner can always bring one home:
+;; after revoking, after expiry, or after disallowing the venue. Unwinding is
+;; de-risking, so the delegate's unwind skips the per-move and daily caps but
+;; still counts against the rate window and the slippage budget.
+;;
+;; Measure, don't trust: every venue call is bracketed by balance reads. The
+;; vault's books follow what it actually holds, and a venue that reports more
+;; than it delivered, takes other than the move, or burns other than asked is
+;; refused. The per-owner allowlist stays the trust anchor, since a venue
+;; answers for its own share ledger.
+
+(use-trait ft .sip-010-trait.sip-010-trait)
+(use-trait venue .venue-trait.venue)
+
+(define-constant BPS u10000)
+(define-constant DAY u144)          ;; ~1 day of Bitcoin blocks
+
+(define-constant ERR_NO_MANDATE  (err u100))
+(define-constant ERR_TOO_LARGE   (err u102))
+(define-constant ERR_EXPIRED     (err u103))
+(define-constant ERR_BALANCE     (err u105))
+(define-constant ERR_ASSET       (err u106))
+(define-constant ERR_VENUE       (err u107))
+(define-constant ERR_SLIPPAGE    (err u108))
+(define-constant ERR_QUOTE       (err u109))
+(define-constant ERR_RATE        (err u110))
+(define-constant ERR_DAILY       (err u111))
+(define-constant ERR_LOSS_BUDGET (err u112))
+(define-constant ERR_POSITION    (err u113))
+(define-constant ERR_MISREPORT   (err u114))
+(define-constant ERR_AGENT       (err u115))
+(define-constant ERR_PARAMS      (err u116))
+(define-constant ERR_CAP         (err u117))
+(define-constant ERR_NOT_DEPLOYER (err u118))
+(define-constant ERR_CAP_SET     (err u119))
+(define-constant ERR_REENTRY     (err u120))
+
+;; the account that deployed this contract: its one power is setting caps
+(define-constant DEPLOYER tx-sender)
+
+(define-map mandates
+  { owner: principal, agent: principal }
+  { max-notional: uint, expires: uint, max-slip-bps: uint,
+    max-trades-per-window: uint, window-len: uint,
+    max-daily-notional: uint, max-cum-slip-bps: uint })
+
+(define-map counters
+  { owner: principal, agent: principal }
+  { window-start: uint, window-count: uint,
+    day-start: uint, day-notional: uint, cum-slip-bps: uint })
+
+;; idle assets held for each owner
+(define-map balances { owner: principal, token: principal } { amount: uint })
+;; venue shares held for each owner, and the asset they unwind to
+(define-map positions { owner: principal, venue: principal } { shares: uint, asset: principal })
+;; the vault's principal in each asset, across all owners, and its cap
+(define-map aum { token: principal } { amount: uint })
+(define-map caps { token: principal } { cap: uint })
+;; per-owner allowlists (v2's fix): assets, and venues with the asset each takes
+(define-map allowed-asset { owner: principal, token: principal } { ok: bool })
+(define-map allowed-venue { owner: principal, venue: principal } { asset: principal })
+
+;; true while allocate, unwind or owner-unwind runs, and so while any venue code
+;; does. An error anywhere undoes the whole call, this flag included, so it can't
+;; stay set.
+(define-data-var closed bool false)
+
+(define-private (check-open) (if (var-get closed) ERR_REENTRY (ok true)))
+(define-private (close) (begin (try! (check-open)) (ok (var-set closed true))))
+(define-private (reopen (result (response uint uint))) (begin (var-set closed false) result))
+
+(define-read-only (balance-of (owner principal) (token principal))
+  (default-to u0 (get amount (map-get? balances { owner: owner, token: token }))))
+
+(define-read-only (shares-of (owner principal) (v principal))
+  (default-to u0 (get shares (map-get? positions { owner: owner, venue: v }))))
+
+(define-read-only (position-of (owner principal) (v principal))
+  (map-get? positions { owner: owner, venue: v }))
+
+(define-read-only (counters-of (owner principal) (agent principal))
+  (default-to { window-start: u0, window-count: u0, day-start: u0, day-notional: u0, cum-slip-bps: u0 }
+    (map-get? counters { owner: owner, agent: agent })))
+
+;; the limits an owner granted a delegate, if any: what a delegate reads before acting
+(define-read-only (mandate-of (owner principal) (agent principal))
+  (map-get? mandates { owner: owner, agent: agent }))
+
+(define-read-only (aum-of (token principal))
+  (default-to u0 (get amount (map-get? aum { token: token }))))
+
+(define-read-only (cap-of (token principal))
+  (default-to u0 (get cap (map-get? caps { token: token }))))
+
+(define-read-only (asset-ok (o principal) (t principal))
+  (default-to false (get ok (map-get? allowed-asset { owner: o, token: t }))))
+
+(define-read-only (venue-asset (o principal) (v principal))
+  (get asset (map-get? allowed-venue { owner: o, venue: v })))
+
+(define-private (credit (owner principal) (token principal) (amt uint))
+  (map-set balances { owner: owner, token: token }
+           { amount: (+ (balance-of owner token) amt) }))
+
+;; set once per asset, by the deployer, and never changed after that
+(define-public (set-cap (token principal) (cap uint))
+  (begin
+    (try! (check-open))
+    (asserts! (is-eq contract-caller DEPLOYER) ERR_NOT_DEPLOYER)
+    (asserts! (is-none (map-get? caps { token: token })) ERR_CAP_SET)
+    (asserts! (> cap u0) ERR_PARAMS)
+    (map-set caps { token: token } { cap: cap })
+    (ok true)))
+
+;; an owner may only ever edit their own allowlists
+(define-public (allow-asset (token principal))
+  (begin (try! (check-open)) (map-set allowed-asset { owner: contract-caller, token: token } { ok: true }) (ok true)))
+(define-public (disallow-asset (token principal))
+  (begin (try! (check-open)) (map-delete allowed-asset { owner: contract-caller, token: token }) (ok true)))
+(define-public (allow-venue (v principal) (asset principal))
+  (begin (try! (check-open)) (map-set allowed-venue { owner: contract-caller, venue: v } { asset: asset }) (ok true)))
+(define-public (disallow-venue (v principal))
+  (begin (try! (check-open)) (map-delete allowed-venue { owner: contract-caller, venue: v }) (ok true)))
+
+(define-public (deposit (token <ft>) (amount uint))
+  (let ((owner contract-caller)
+        (tok (contract-of token))
+        (held (aum-of (contract-of token))))
+    (try! (check-open))
+    (asserts! (asset-ok owner tok) ERR_ASSET)
+    ;; the vault's principal in this asset, across all owners, stays within its cap
+    (asserts! (<= (+ held amount) (cap-of tok)) ERR_CAP)
+    (try! (contract-call? token transfer amount owner (try! (as-contract? () tx-sender)) none))
+    (map-set aum { token: tok } { amount: (+ held amount) })
+    (credit owner tok amount)
+    (ok true)))
+
+(define-public (grant
+    (agent principal) (max-notional uint) (expires uint) (max-slip-bps uint)
+    (max-trades-per-window uint) (window-len uint)
+    (max-daily-notional uint) (max-cum-slip-bps uint))
+  (begin
+    (try! (check-open))
+    ;; the vault can't be its own delegate: a venue calling back mid-call runs
+    ;; as the vault, so a mandate held by the vault would let that venue act
+    (asserts! (not (is-eq agent (try! (as-contract? () tx-sender)))) ERR_AGENT)
+    ;; refuse parameters that would switch a limit off (a zero-length window
+    ;; restarts on every call) or abort later (a floor computed below zero)
+    (asserts! (> window-len u0) ERR_PARAMS)
+    (asserts! (<= max-slip-bps BPS) ERR_PARAMS)
+    (asserts! (<= max-cum-slip-bps BPS) ERR_PARAMS)
+    (map-set mandates { owner: contract-caller, agent: agent }
+      { max-notional: max-notional, expires: expires, max-slip-bps: max-slip-bps,
+        max-trades-per-window: max-trades-per-window, window-len: window-len,
+        max-daily-notional: max-daily-notional, max-cum-slip-bps: max-cum-slip-bps })
+    (map-set counters { owner: contract-caller, agent: agent }
+      { window-start: burn-block-height, window-count: u0,
+        day-start: burn-block-height, day-notional: u0, cum-slip-bps: u0 })
+    (ok true)))
+
+(define-public (revoke (agent principal))
+  (begin (try! (check-open)) (map-delete mandates { owner: contract-caller, agent: agent }) (ok true)))
+
+;; withdrawal depends only on the ledger, never on a mandate
+(define-public (withdraw (token <ft>) (amount uint))
+  (let ((owner contract-caller) (tok (contract-of token))
+        (bal (balance-of contract-caller (contract-of token))))
+    (try! (check-open))
+    (asserts! (>= bal amount) ERR_BALANCE)
+    (map-set balances { owner: owner, token: tok } { amount: (- bal amount) })
+    ;; withdrawing frees room under the cap; yield can't take principal below zero
+    (map-set aum { token: tok } { amount: (if (> (aum-of tok) amount) (- (aum-of tok) amount) u0) })
+    (as-contract? ((with-ft (contract-of token) "*" amount))
+      (try! (contract-call? token transfer amount tx-sender owner none)))))
+
+;; the delegate moves idle assets into an allowlisted venue
+(define-public (allocate (owner principal) (v <venue>) (asset <ft>) (amount uint))
+  (begin (try! (close)) (reopen (allocate-closed owner v asset amount))))
+
+(define-private (allocate-closed (owner principal) (v <venue>) (asset <ft>) (amount uint))
+  (let ((m   (unwrap! (map-get? mandates { owner: owner, agent: contract-caller }) ERR_NO_MANDATE))
+        (c   (counters-of owner contract-caller))
+        (vn  (contract-of v))
+        (at  (contract-of asset))
+        (bal (balance-of owner at))
+        (h   burn-block-height))
+
+    ;; identity first, then policy, then state
+    (asserts! (asset-ok owner at) ERR_ASSET)
+    (asserts! (is-eq (venue-asset owner vn) (some at)) ERR_VENUE)
+    ;; a position keeps the asset it was opened with
+    (asserts! (match (position-of owner vn) p (is-eq (get asset p) at) true) ERR_VENUE)
+    (asserts! (<= amount (get max-notional m)) ERR_TOO_LARGE)
+    (asserts! (< h (get expires m)) ERR_EXPIRED)
+
+    (let (
+        ;; rate limit -- window rolls forward on its own
+        (win-live  (< h (+ (get window-start c) (get window-len m))))
+        (win-start (if win-live (get window-start c) h))
+        (win-count (if win-live (get window-count c) u0))
+        ;; rolling daily notional
+        (day-live  (< h (+ (get day-start c) DAY)))
+        (day-start (if day-live (get day-start c) h))
+        (day-notl  (if day-live (get day-notional c) u0)))
+
+      ;; policy exhaustion is an authority question, so it is answered
+      ;; before the state question of whether the funds are there
+      (asserts! (< win-count (get max-trades-per-window m)) ERR_RATE)
+      (asserts! (<= (+ day-notl amount) (get max-daily-notional m)) ERR_DAILY)
+      (asserts! (>= bal amount) ERR_BALANCE)
+
+      (let ((quoted (unwrap! (contract-call? v convert-to-shares amount) ERR_QUOTE))
+            (me     (try! (as-contract? () tx-sender))))
+        (asserts! (> quoted u0) ERR_QUOTE)
+        (let ((floor         (/ (* quoted (- BPS (get max-slip-bps m))) BPS))
+              (asset-before  (unwrap! (contract-call? asset get-balance me) ERR_QUOTE))
+              (shares-before (unwrap! (contract-call? v get-balance me) ERR_QUOTE)))
+          (map-set balances { owner: owner, token: at } { amount: (- bal amount) })
+          ;; the outflow is capped at the move, so a venue cannot take more
+          (let ((reported (try! (as-contract? ((with-ft at "*" amount))
+                                  (try! (contract-call? v deposit amount floor me)))))
+                (asset-after  (unwrap! (contract-call? asset get-balance me) ERR_QUOTE))
+                (shares-after (unwrap! (contract-call? v get-balance me) ERR_QUOTE))
+                (spent (if (>= asset-before asset-after) (- asset-before asset-after) u0))
+                (got   (if (> shares-after shares-before) (- shares-after shares-before) u0)))
+            ;; measure, don't trust: exactly the move left, and the shares arrived
+            (asserts! (is-eq spent amount) ERR_MISREPORT)
+            (asserts! (<= reported got) ERR_MISREPORT)
+            (asserts! (>= got floor) ERR_SLIPPAGE)
+            (let ((slip (if (>= got quoted) u0 (/ (* (- quoted got) BPS) quoted)))
+                  (cum  (get cum-slip-bps c)))
+              ;; cumulative execution bleed -- oracle-free stand-in for drawdown
+              (asserts! (<= (+ cum slip) (get max-cum-slip-bps m)) ERR_LOSS_BUDGET)
+              (map-set counters { owner: owner, agent: contract-caller }
+                { window-start: win-start, window-count: (+ win-count u1),
+                  day-start: day-start, day-notional: (+ day-notl amount),
+                  cum-slip-bps: (+ cum slip) })
+              (map-set positions { owner: owner, venue: vn }
+                { shares: (+ (shares-of owner vn) got), asset: at })
+              (ok got))))))))
+
+;; debit the position, redeem under a cap on the vault's shares, credit what
+;; actually arrived
+(define-private (exit-position (owner principal) (v <venue>) (asset <ft>) (shares uint) (min-out uint))
+  (let ((vn   (contract-of v))
+        (p    (unwrap! (position-of owner vn) ERR_POSITION))
+        (have (get shares p))
+        (me   (try! (as-contract? () tx-sender))))
+    (asserts! (is-eq (contract-of asset) (get asset p)) ERR_ASSET)
+    (asserts! (and (> shares u0) (<= shares have)) ERR_POSITION)
+    (if (is-eq shares have)
+        (map-delete positions { owner: owner, venue: vn })
+        (map-set positions { owner: owner, venue: vn } { shares: (- have shares), asset: (get asset p) }))
+    (let ((shares-before (unwrap! (contract-call? v get-balance me) ERR_QUOTE))
+          (asset-before  (unwrap! (contract-call? asset get-balance me) ERR_QUOTE))
+          (reported (try! (as-contract? ((with-ft vn "*" shares))
+                            (try! (contract-call? v redeem shares min-out me)))))
+          (shares-after (unwrap! (contract-call? v get-balance me) ERR_QUOTE))
+          (asset-after  (unwrap! (contract-call? asset get-balance me) ERR_QUOTE))
+          (got (if (> asset-after asset-before) (- asset-after asset-before) u0)))
+      ;; measure, don't trust: exactly the shares asked were burned, and the
+      ;; assets the venue reported arrived
+      (asserts! (and (>= shares-before shares-after)
+                     (is-eq (- shares-before shares-after) shares)) ERR_MISREPORT)
+      (asserts! (<= reported got) ERR_MISREPORT)
+      (asserts! (>= got min-out) ERR_SLIPPAGE)
+      (credit owner (get asset p) got)
+      (ok got))))
+
+;; the delegate brings a position back to idle, inside the mandate
+(define-public (unwind (owner principal) (v <venue>) (asset <ft>) (shares uint))
+  (begin (try! (close)) (reopen (unwind-closed owner v asset shares))))
+
+(define-private (unwind-closed (owner principal) (v <venue>) (asset <ft>) (shares uint))
+  (let ((m (unwrap! (map-get? mandates { owner: owner, agent: contract-caller }) ERR_NO_MANDATE))
+        (c (counters-of owner contract-caller))
+        (h burn-block-height))
+    (asserts! (< h (get expires m)) ERR_EXPIRED)
+    (let ((win-live  (< h (+ (get window-start c) (get window-len m))))
+          (win-start (if win-live (get window-start c) h))
+          (win-count (if win-live (get window-count c) u0)))
+      (asserts! (< win-count (get max-trades-per-window m)) ERR_RATE)
+      (asserts! (<= shares (shares-of owner (contract-of v))) ERR_POSITION)
+      (let ((quoted (unwrap! (contract-call? v convert-to-assets shares) ERR_QUOTE)))
+        (asserts! (> quoted u0) ERR_QUOTE)
+        (let ((got (try! (exit-position owner v asset shares
+                           (/ (* quoted (- BPS (get max-slip-bps m))) BPS))))
+              (slip (if (>= got quoted) u0 (/ (* (- quoted got) BPS) quoted)))
+              (cum  (get cum-slip-bps c)))
+          (asserts! (<= (+ cum slip) (get max-cum-slip-bps m)) ERR_LOSS_BUDGET)
+          (map-set counters { owner: owner, agent: contract-caller }
+            (merge c { window-start: win-start, window-count: (+ win-count u1),
+                       cum-slip-bps: (+ cum slip) }))
+          (ok got))))))
+
+;; the owner can always bring a position home: no mandate, no rate limit
+(define-public (owner-unwind (v <venue>) (asset <ft>) (shares uint) (min-out uint))
+  (begin (try! (close)) (reopen (exit-position contract-caller v asset shares min-out))))

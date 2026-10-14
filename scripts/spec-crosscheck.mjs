@@ -2,7 +2,7 @@
 // model can't fall behind the tests (#8). CI runs it on every pull request.
 import { readFileSync } from "node:fs";
 
-const files = ["tests/v4.test.ts", "tests/v4-hostile.test.ts", "tests/v4-zest-fork.test.ts", "tests/v4-granite-fork.test.ts", "tests/sbtc-testnet.fork.ts", "tests/phishing.test.ts", "tests/v4-adversarial.test.ts", "tests/v4-invariants.test.ts"];
+const files = ["tests/v5.test.ts", "tests/v5-hostile.test.ts", "tests/v5-zest-fork.test.ts", "tests/v5-granite-fork.test.ts", "tests/sbtc-testnet.fork.ts", "tests/phishing.test.ts", "tests/reentry.test.ts", "tests/v5-adversarial.test.ts", "tests/v5-invariants.test.ts"];
 const spec = readFileSync("docs/SPEC.md", "utf8");
 const missing = [];
 let count = 0;

@@ -20,8 +20,8 @@ path = "contracts/venue-trait.clar"
 epoch = "latest"
 clarity_version = 4
 
-[contracts.mandate-vault-v4]
-path = "contracts/mandate-vault-v4.clar"
+[contracts.mandate-vault-v5]
+path = "contracts/mandate-vault-v5.clar"
 epoch = "latest"
 clarity_version = 4
 
