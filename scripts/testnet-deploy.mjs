@@ -1,17 +1,15 @@
-// Deploys Mandate's M1 contracts to Stacks testnet from account 1, in dependency
-// order, confirming each before the next. A contract already deployed with the
-// repo's source is skipped, so after a testnet reset the same command rebuilds
-// everything (#7). Writes deployments/testnet.json.
+// Deploys the contracts Clarinet-testnet.toml lists to Stacks testnet from account
+// 1, in the manifest's order, confirming each before the next. A contract already
+// deployed with the repo's source is skipped, so after a testnet reset the same
+// command rebuilds everything (#7, #26). Writes deployments/testnet.json.
 import fs from "node:fs";
 import { makeContractDeploy, fetchNonce } from "@stacks/transactions";
-import { testnetAccounts, broadcast, waitFor, API, clarityVersionOf } from "./testnet-accounts.mjs";
-
-const CONTRACTS = ["sip-010-trait", "venue-trait", "mock-token", "mock-venue", "mandate-vault-v3"];
+import { testnetAccounts, broadcast, waitFor, API, clarityVersionOf, testnetContracts } from "./testnet-accounts.mjs";
 
 const [owner] = await testnetAccounts();
 const record = { network: "testnet", deployer: owner.address, contracts: {} };
 console.log(`deployer ${owner.address}`);
-for (const name of CONTRACTS) {
+for (const name of testnetContracts()) {
   const id = `${owner.address}.${name}`;
   const source = fs.readFileSync(`contracts/${name}.clar`, "utf8");
   const clarityVersion = clarityVersionOf(name);

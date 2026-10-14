@@ -1,20 +1,39 @@
-// Testnet accounts and transaction helpers for the M1 testnet run (#7).
+// Testnet accounts and transaction helpers for the M1 testnet run (#7, #26).
 // Account 1 deploys and owns; account 2 is the delegate. The seed is read from
 // the gitignored settings/Testnet.toml and never printed, nor is any key.
-// Run directly to print both addresses and their STX balances.
+// Run directly to print both addresses and their STX and testnet sBTC balances.
 import fs from "node:fs";
 import { broadcastTransaction } from "@stacks/transactions";
 import { generateWallet, generateNewAccount, getStxAddress } from "@stacks/wallet-sdk";
 
 export const API = "https://api.testnet.hiro.so";
+// Testnet's official sBTC (docs/CONTEXT.md).
+export const SBTC = { address: "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1", name: "sbtc-token" };
 
-// The Clarity version Clarinet.toml gives a contract, so testnet runs what the tests run.
+// Clarinet-testnet.toml lists what goes to testnet, in deployment order, with the
+// Clarity versions its fork test runs. Contracts it doesn't list, such as the mock
+// token in the earliest testnet records, fall back to Clarinet.toml.
+const MANIFESTS = ["Clarinet-testnet.toml", "Clarinet.toml"];
+const sections = (file) => fs.readFileSync(file, "utf8").split(/^\[/m);
+
+export const testnetContracts = () =>
+  sections("Clarinet-testnet.toml").map((s) => s.match(/^contracts\.([\w-]+)\]/)?.[1]).filter(Boolean);
+
 export function clarityVersionOf(name) {
-  const section = fs.readFileSync("Clarinet.toml", "utf8").split(/^\[/m)
-    .find((s) => s.startsWith(`contracts.${name}]`));
-  const version = Number(section?.match(/^clarity_version\s*=\s*(\d+)/m)?.[1]);
-  if (!version) throw new Error(`Clarinet.toml gives no clarity_version for ${name}`);
-  return version;
+  for (const file of MANIFESTS) {
+    const section = sections(file).find((s) => s.startsWith(`contracts.${name}]`));
+    const version = Number(section?.match(/^clarity_version\s*=\s*(\d+)/m)?.[1]);
+    if (version) return version;
+  }
+  throw new Error(`no clarity_version for ${name} in ${MANIFESTS.join(" or ")}`);
+}
+
+// A principal's balance of testnet sBTC, in sats.
+export async function sbtcBalance(who) {
+  const r = await fetch(`${API}/extended/v1/address/${who}/balances`);
+  if (!r.ok) throw new Error(`balance of ${who}: HTTP ${r.status}`);
+  const ft = (await r.json()).fungible_tokens?.[`${SBTC.address}.${SBTC.name}::sbtc-token`];
+  return BigInt(ft?.balance ?? 0);
 }
 
 export async function testnetAccounts() {
@@ -55,6 +74,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   for (const [i, { address }] of (await testnetAccounts()).entries()) {
     const r = await fetch(`${API}/extended/v1/address/${address}/stx`);
     const stx = r.ok ? Number((await r.json()).balance) / 1e6 : NaN;
-    console.log(`account ${i + 1} (${i === 0 ? "owner, deployer" : "delegate"}): ${address}  ${stx} STX`);
+    console.log(`account ${i + 1} (${i === 0 ? "owner, deployer" : "delegate"}): ${address}  ${stx} STX, ${await sbtcBalance(address)} sats of testnet sBTC`);
   }
 }
