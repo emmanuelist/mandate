@@ -37,7 +37,7 @@ Then say the next action back before starting work.
 ## Stack and commands
 - Clarity 4 contracts in `contracts/`; Clarinet 3.24.1, `@stacks/clarinet-sdk` 3.23.2, Vitest 4, Node 26.
 - `npm ci` once.
-- `npx vitest run` runs the full suite in about 6 to 10 minutes. Every test forks Stacks mainnet through api.hiro.so (`[repl.remote_data]` in `Clarinet.toml`). Wait for the summary line: partial output gives wrong counts.
+- `npm test` runs the local suites (`npx vitest run --config vitest.local.config.ts`: no fork, seconds) and then the fork suite (`npx vitest run`: about 6 to 10 minutes, every test forking Stacks mainnet through api.hiro.so, `[repl.remote_data]` in `Clarinet.toml`). A suite that needs no mainnet contract belongs in `LOCAL_SUITES` in `vitest.local.config.ts`. Wait for each summary line: partial output gives wrong counts.
 - `npx vitest run --config vitest.jing.config.ts` runs the Jing fork, pinned at block 9,036,500 by `Clarinet-jing.toml`.
 - `npx vitest run --config vitest.testnet.config.ts` runs the testnet fork, pinned at testnet block 719,800 by `Clarinet-testnet.toml`: the vault and the testnet sBTC venue against testnet's official sBTC.
 - `npm run testnet` deploys the contracts `Clarinet-testnet.toml` lists to testnet from account 1 of `settings/Testnet.toml`, then runs one mandate end to end with testnet's official sBTC and account 2 as the delegate, and records both in `deployments/`. It skips a contract already deployed with the repo's source and stops if the source differs. A fresh account spends 7.51 testnet STX and needs 20,000 sats of testnet sBTC, which come back at the end of the run.

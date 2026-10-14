@@ -148,19 +148,21 @@ Contract: `SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH.mandate-probe-mainnet`, dep
 
 ## Running the test suite
 
-**Requirements:** Node.js 26 and npm, and network access to `api.hiro.so`, and to
-`api.testnet.hiro.so` for the testnet test. Every test runs against a fork of a
-Stacks network served by Hiro's public API. Neither an API key nor the Clarinet CLI
-is required.
+**Requirements:** Node.js 26 and npm. The fork suites also need network access to
+`api.hiro.so`, and the testnet test to `api.testnet.hiro.so`, through Hiro's public
+API. Neither an API key nor the Clarinet CLI is required.
 
     git clone https://github.com/emmanuelist/mandate
     cd mandate
     npm ci
-    npx vitest run
+    npm test
 
-The full suite comprises 134 tests in 21 files and completes in approximately 6 to
-10 minutes. It forks mainnet at block 9,194,000 (`initial_height` in `Clarinet.toml`),
-so results do not change as mainnet advances. Results are final only once the
+`npm test` runs two suites. The local suites, 93 tests in 5 files, touch only local
+contracts and run in seconds without a network
+(`npx vitest run --config vitest.local.config.ts`). The fork suite, 41 tests in 16
+files, runs against a fork of Stacks mainnet at block 9,194,000 (`initial_height` in
+`Clarinet.toml`), so its results do not change as mainnet advances, and completes in
+approximately 6 to 10 minutes (`npx vitest run`). Results are final only once each
 summary line has been printed.
 
 The Jing test forks an earlier block, 9,036,500, from a separate manifest, and runs
@@ -251,11 +253,11 @@ To deploy an independent copy and run the same lifecycle:
       mandate-vault-v2.clar       Second version, retained with its tests
       mandate-probe-mainnet.clar  The minimal probe deployed on mainnet
       *probe.clar, venue-spike.clar   Exploratory contracts behind the venue findings
-    tests/                        134 tests in 21 files, plus the Jing and testnet fork tests
+    tests/                        134 tests in 21 files, 93 local and 41 on a mainnet fork, plus the Jing and testnet fork tests
     scripts/                      Testnet deployment, execution and verification; the reference delegate; the specification check
     deployments/                  Testnet deployment records
     docs/                         Specification, plan, decisions, evidence and verified dependency facts
-    Clarinet*.toml                Manifests for the mainnet fork, the Jing fork and the testnet fork
+    Clarinet*.toml                Manifests for the mainnet fork, the Jing fork, the testnet fork and the local suites
 
 ## Documentation
 
