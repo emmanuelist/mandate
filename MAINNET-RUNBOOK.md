@@ -1,117 +1,110 @@
-# Mainnet proof runbook
+# Mainnet runbook
 
-## STATUS: deployed
+This runbook takes Mandate's vault to Stacks mainnet (#34), and lists what follows it:
+the live mandate (#35) and the refusals on the record (#36). Every mainnet transaction
+is signed with the owner's key, on the owner's command. The scripts read the seed only
+when told to broadcast, in their own process, and never print it.
 
-    contract : SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH.mandate-probe-mainnet
-    deploy tx: 0x77489c3697c99efd83ada94c9ebbd681b26d07b21949c842d28386a671a42ebc
-    block    : 8878880   fee: 0.393381 STX   status: success
-    get-owner: SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH  (matches deployer)
+## What goes to mainnet
 
-## COMPLETE
+| Contract | Role | Size |
+| --- | --- | --- |
+| `sip-010-trait` | The standard token trait, included so one source deploys on every network (D-014) | 1,211 bytes |
+| `venue-trait` | The interface the vault requires of a venue; Zest's sBTC vault conforms as deployed (D-009) | 588 bytes |
+| `mandate-vault-v5` | The vault (D-022) | 18,392 bytes |
+| `granite-venue` | The adapter for Granite's USDCx lending pool, the second venue (D-020) | 3,758 bytes |
 
-    fund     0x8251abef4b4c76dc588c54722098f0fdc8860157602cf501e0815f2036b03df6  (ok true)
-    allocate 0x8fa8b392a30e7786860e187a7c0cf62e5aa812150dbb0bfec1c324bd9e7fa121  (ok u99)   <- the proof
-    unwind   0xfc168e4b2b7b9037742f240ac2624c64ce9ad14ac4959f16fd82996f0640695e  (ok u99)
-    rescue   0xd9dda0d85334e5cac65445927b0bc9e5611db578ba73afe8a5d7b87f7049a074  (ok true)
+`Clarinet-review.toml` lists these four, and the static checks use the same list. The
+repo's source is what is deployed: a contract already on mainnet with different source
+stops the run, since a name cannot be deployed twice.
 
-Contract ended with 0 sBTC and 0 Zest shares. Total cost ~0.405 STX.
-Steps below are kept for reference / re-running.
+After deploying, the deployer sets each asset's cap once. Nothing can raise a cap
+afterwards; a higher one means a new deployment, after an audit (D-008, D-018, D-020).
 
-Run them with:
-
-    node run-mainnet-proof.mjs               # dry run, signs nothing
-    AMOUNT=100 node run-mainnet-proof.mjs --broadcast
-
-The script reads your seed from settings/Mainnet.toml, signs locally, and prints
-the four hashes. The seed is never printed or sent anywhere but the Stacks node.
-
-Minimum workable size is 2 sats — 1 sat rounds to zero shares and trips Zest's
-ERR-SLIPPAGE (u801010). 100 sats is the suggested default: unambiguous, and about
-eleven cents.
-
-
-Goal: turn "proven against forked state" into four mainnet transaction hashes anyone
-can verify on a public explorer.
-
-Deploying `mandate-probe-mainnet.clar` only. Not the full vault — this proves the one
-claim forked state cannot: that a real broadcast works.
+| Asset | Cap |
+| --- | --- |
+| sBTC, `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token` | 1,000,000 sats (0.01 BTC) |
+| USDCx, `SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx` | 1,000,000,000 units (1,000 USDCx at 6 decimals) |
 
 ## Before you start
 
-- A **fresh** Stacks wallet. Not your main one.
-- **~5 STX** for the deploy plus four contract calls.
-- **~10,000 sats sBTC** (about $11). Any amount works; small is the point.
-- Never paste your seed phrase into a chat, an issue, or a commit.
-  `settings/Mainnet.toml` is gitignored — keep it that way.
+- `settings/Mainnet.toml` holds the seed whose first account,
+  `SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH`, deploys the contracts and owns the vault's
+  caps. The file is excluded from version control. Never paste the seed into a chat, an
+  issue or a commit.
+- The deployer held 188.34 STX on 2026-10-14, far more than the deployment needs.
+- v5 has been rehearsed on testnet: deployed from the same source, run end to end, and
+  driven by the reference delegate, with refusals on the record (#52, E-037).
 
-## Steps
+## Step 1: dry run
 
-1. Put your seed phrase in `settings/Mainnet.toml` (replace the placeholder).
+    npm run mainnet:deploy
 
-2. Generate the plan:
+The dry run reads no key and signs nothing. For each step it prints Hiro's low, medium
+and high fee estimates, then the total at the medium against the deployer's balance.
+On 2026-10-14 it printed:
 
-       clarinet deployments generate --mainnet --medium-cost
+| Step | Signed by | Fee at the medium estimate |
+| --- | --- | --- |
+| Deploy `sip-010-trait` | the deployer | 0.605 STX |
+| Deploy `venue-trait` | the deployer | 0.605 STX |
+| Deploy `mandate-vault-v5` | the deployer | 0.608 STX |
+| Deploy `granite-venue` | the deployer | 0.606 STX |
+| Set sBTC's cap | the deployer | budgeted at 0.608 STX |
+| Set USDCx's cap | the deployer | budgeted at 0.608 STX |
+| Total | | 3.64 STX |
 
-   **The generated plan is wrong and must be trimmed.** Clarinet includes every
-   contract in `Clarinet.toml`, which here means all seven — the original buggy
-   spike, a token with an open `mint`, and `zest-probe` which has no exit. Deploying
-   those would cost 2.944 STX instead of 0.393 and would publish known-broken code
-   under your address permanently.
+The estimates follow the fee market. Within ten minutes on 2026-10-14, the medium
+estimate for a deploy ranged from 0.61 to 1.23 STX. Setting a cap has no estimate until
+the vault exists, so the dry run budgets each at the highest deploy estimate; a contract
+call costs less than a deploy.
 
-   The trimmed plan in this repo already contains only `mandate-probe-mainnet`.
-   Confirm it still does:
+## Step 2: broadcast
 
-       grep -c contract-publish deployments/default.mainnet-plan.yaml   # must print 1
+    npm run mainnet:deploy -- --broadcast
 
-   If you regenerate, it will be overwritten and you must trim it again. The
-   generated version is kept at `default.mainnet-plan.yaml.generated.bak` for
-   reference.
+The broadcast run:
 
-3. Deploy using the on-disk plan, so Clarinet does not recompute it:
+- reads the seed from `settings/Mainnet.toml`, and stops unless its first account is
+  the deployer above;
+- deploys each contract that is not yet on mainnet, in order, each confirmed before the
+  next, and skips one already deployed with identical source;
+- pays each transaction's medium estimate, and stops rather than pay more than 2 STX for
+  any one of them;
+- sets each cap that is unset, then reads it back from the vault; a cap already set must
+  match the one above;
+- writes `deployments/mainnet.json` as it goes, so a run that stops can be resumed.
 
-       clarinet deployments apply --mainnet --use-on-disk-deployment-plan
+A transaction usually confirms within minutes; the run waits up to an hour for each.
 
-   Without that flag it may regenerate and redeploy all seven.
+## Step 3: verify
 
-4. Send sBTC to the deployed contract by calling `fund`, then run the three calls in
-   order. Use the Hiro explorer sandbox or `stx` CLI:
+    npm run mainnet:verify
 
-   Easiest route is the Hiro explorer sandbox:
-   https://explorer.hiro.so/sandbox/contract-call?chain=mainnet
-   Paste the contract address, pick the function, connect the deployer wallet.
+The verification needs no keys, so anyone with a clone can run it. It checks each
+contract in `deployments/mainnet.json` against the repo's source and Clarity version,
+and reads each cap back from the vault.
 
-   Dry-run values from forked mainnet at 7,000 sats — yours should be within a
-   sat or two, since Zest shares accrue between blocks:
+## After the deployment
 
-   | # | Call | Arguments | Expected |
-   |---|------|-----------|----------|
-   | 1 | `fund` | `sbtc-token`, `7000` | `(ok true)` |
-   | 2 | `allocate` | `7000`, `1` | `(ok u6996)` <- **the proof** |
-   | 3 | `unwind` | *shares from step 2*, `1` | `(ok u6999)` |
-   | 4 | `rescue` | `sbtc-token`, *sats from step 3* | `(ok true)` |
+- **The live mandate (#35).** The owner funds a mandate with real sBTC and about
+  20 USDCx, and grants it to the reference delegate. The owner creates the delegate's key
+  with `npm run delegate:key -- mainnet` and funds it with STX for fees. At least ten
+  transactions follow: at least four allocations by the delegate, two unwinds and an
+  owner withdrawal, across Zest and Granite. The owner's mainnet tooling comes with #35.
+- **Refusals on the record (#36).** The delegate attempts calls its mandate forbids with
+  `npm run delegate -- mainnet attempt <kind>`, as it did on testnet (D-024, E-037).
 
-   The sBTC token argument is the principal
-   `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`.
+## Earlier: the mainnet probe
 
-   Use the value step 2 actually returns for step 3 — do not hardcode 6996.
-   Same for step 4. The `min-out` of `1` is deliberately permissive for a probe
-   this small; the real vault derives it from policy.
+Before the vault, a minimal probe contract showed that a Clarity contract can deposit
+real sBTC into Zest's mainnet vault and withdraw it (E-001, E-002). The contract ended
+holding no sBTC and no Zest shares, for about 0.405 STX in fees.
+`run-mainnet-proof.mjs` made the four calls.
 
-   Post-conditions: step 1 moves sBTC out of *your wallet*; steps 2-4 move it out
-   of *the contract*. If the explorer blocks a call on post-conditions, set Allow
-   mode — the amounts are trivial and the contract is owner-only.
-
-5. Collect the four `0x…` transaction hashes. Those go in the application.
-
-## Sanity
-
-- Call 2 is the one that matters. On Bitflow the equivalent returns `(err u3003)`.
-- If call 2 fails, do **not** retry blindly — read the error and check it against
-  `tests/zest-fork.test.ts`, which passes against the same contracts.
-- `rescue` is owner-only and pays the deployer. Without it, funds sent here would be
-  trapped: `unwind` returns sats to the *contract*, not to you.
-
-## Cost
-
-Deploy is the only real cost, roughly 0.1–1 STX for a contract this size, plus four
-small call fees. Budget 5 STX and you will not run out.
+    contract  SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH.mandate-probe-mainnet
+    deploy    0x77489c3697c99efd83ada94c9ebbd681b26d07b21949c842d28386a671a42ebc  block 8,878,880, fee 0.393381 STX
+    fund      0x8251abef4b4c76dc588c54722098f0fdc8860157602cf501e0815f2036b03df6  (ok true)
+    allocate  0x8fa8b392a30e7786860e187a7c0cf62e5aa812150dbb0bfec1c324bd9e7fa121  (ok u99)
+    unwind    0xfc168e4b2b7b9037742f240ac2624c64ce9ad14ac4959f16fd82996f0640695e  (ok u99)
+    rescue    0xd9dda0d85334e5cac65445927b0bc9e5611db578ba73afe8a5d7b87f7049a074  (ok true)

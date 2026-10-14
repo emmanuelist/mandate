@@ -40,6 +40,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-035 | 2026-10-14 | The structured review found that v4 credits a venue's call back twice (#48), and v5 closes the vault while a venue runs (D-022). On v4, an owner who lists a venue of their own takes another owner's deposit through the owner's unwind, the delegate's unwind, and a public balance read after the redeem: each time mallory's side puts in 500,000 and takes out 999,999, and alice's withdrawal of her 500,000 fails with the vault holding 1. On v5 each attempt is refused with nothing moved, with `u120`, or `u109` where the venue passes the refusal on from a read, and a venue that ignores the refusal leaves the books exact. The adversarial suite's 15 re-entry cases pass, two of them Clarity's own abort of a call back into the running function. v5 without its check fails 21 tests, among them all 13 adversarial re-entry cases it refuses. The invariant walk, with one venue calling back at random, holds on v5 over the fixed seed and 73 random seeds and refuses every call back; on v4 every one of 8 seeds fails, 5 of them at the step where an unwind is credited twice. All three manifests check with no errors. Local suites: 119 of 119 in 7 files. Fork suite on v5: 41 of 41 in 16 files | `npx vitest run --config vitest.local.config.ts`; `INVARIANT_VAULT=mandate-vault-v4 INVARIANT_SEED=<n>` on the walk; a mutant; `npx vitest run`; `clarinet check` (output below) | `13a3fda` |
 | E-036 | 2026-10-14 | The structured review is published and its static checks run. `docs/REVIEW.md` logs 15 findings with their severity, status and fixing commit or reason, among them R-001, the flaw #48 fixed. All four manifests the check covers type-check with no errors, and each of the 64 warnings Clarinet raises is justified in the log at its line. The check fails on a warning the log doesn't list, on a row whose warning is gone, on a removed row, and on a contract that doesn't type-check. Clarinet's taint analysis with `callee_filter` on gave v5 14 warnings in 6 of 10 runs and 19 in 4; off, 26 in 10 of 10. From an empty home with no cache, `clarinet check` fetches 20 requirements and writes clean JSON. The two deployed contracts `granite-venue` reads, `state-v1` and `usdcx`, return `(ok (ft-get-balance ...))` from `get-balance` | `npm run static`; four throwaway mutants; ten runs each way; `.cache/requirements` (output below) | `2d0a846` |
 | E-037 | 2026-10-14 | v5 is rehearsed on testnet (#52). `npm run testnet` deployed v5 with the repo's source ([block 725,660](https://explorer.hiro.so/txid/0x8d97cca7121c7d5ec43fae56db34efa636fe9a6971b7488b390060026bb635b2?chain=testnet)), set testnet sBTC's cap and read it back as `u1000000`, and ran the lifecycle on v5: seven transactions, each `(ok ...)`, with the books reconciling exactly. A first attempt at the lifecycle succeeded step by step but failed to reconcile, because the Hiro Platform faucet's address sent the owner 10,000 sats mid-run, at block 725,677; the run now reconciles the owner's wallet net of transfers from outside it. Under a mandate on v5, the reference delegate allocated 20,000, unwound 10,000, allocated 20,000 and unwound 30,000, signing alone in deny mode. It then attempted four calls the mandate forbids, each refused with no events: 20,001 sats against a per-move cap of 20,000 (`u102`), a venue the owner never listed (`u107`), a withdrawal (`u105`), and an allocation after the owner revoked (`u100`). The owner revoked and withdrew all 40,000 sats, and withdrew the 40,000 left in v4, so no testnet vault holds funds. `npm run testnet:verify`: 25 of 25 | `npm run testnet`, `npm run testnet:mandate`, `npm run delegate -- testnet 7500,2500,7500,0` and `attempt <kind>`, `npm run testnet:verify` (output below) | `e749256` |
+| E-038 | 2026-10-14 | The mainnet deployment is ready to run and costs about 3.64 STX at the medium fee estimate (#34). `npm run mainnet:deploy` read no key and sent nothing: it found none of the four contracts on mainnet, estimated each deploy at about 0.61 STX at the medium (0.52 low, 1.00 high), budgeted the two caps at a deploy's price since a vault not yet deployed has no estimate, and found the deployer holding 188.34 STX. Its first version reported a fallback as an estimate, since `fetchFeeEstimate` returns a number, not the three estimates; the script now reads all three. `npm run mainnet:verify` reports that nothing is deployed yet | `npm run mainnet:deploy`; `npm run mainnet:verify` (output below) | `b109eb1` |
 
 ### E-001 output
 ~~~text
@@ -810,4 +811,28 @@ refusals: the delegate ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6 attempting what
   ok   withdraw        withdraw abort_by_response, (err u105), 0 events, signer the delegate, block 727186
   ok   revoked         allocate abort_by_response, (err u100), 0 events, signer the delegate, block 727192
 all 25 checks pass
+~~~
+
+### E-038 output
+~~~text
+$ npm run mainnet:deploy
+deployer SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH, dry run: no key read, nothing signed or sent
+  deploy sip-010-trait       1211 bytes, Clarity 4: low 0.520050 STX, medium 0.605218 STX, high 0.998349 STX
+  deploy venue-trait          588 bytes, Clarity 4: low 0.519960 STX, medium 0.605113 STX, high 0.998176 STX
+  deploy mandate-vault-v5   18392 bytes, Clarity 4: low 0.522510 STX, medium 0.608081 STX, high 1.003072 STX
+  deploy granite-venue       3758 bytes, Clarity 4: low 0.520410 STX, medium 0.605637 STX, high 0.999040 STX
+  set-cap sBTC: 1,000,000 sats, 0.01 BTC: no estimate before the vault exists; budgeted at 0.608081 STX
+  set-cap USDCx: 1,000 USDCx at 6 decimals: no estimate before the vault exists; budgeted at 0.608081 STX
+budget at the medium estimates 3.640211 STX; the deployer holds 188.343334 STX
+
+# the first version: every fee printed as 0.050000 STX, the script's own fallback
+# fetchFeeEstimate, called directly, returned one number per deploy:
+venue-trait length 721
+  estimates: 732229
+# fetchFeeEstimateTransaction returned all three, minutes later:
+venue-trait fee 519960 rate 30.00 | fee 1223802 rate 70.61 | fee 1238628 rate 71.46
+mandate-vault-v5 fee 522510 rate 30.00 | fee 1229804 rate 70.61 | fee 1244702 rate 71.46
+
+$ npm run mainnet:verify
+no deployments/mainnet.json: the vault isn't on mainnet yet
 ~~~

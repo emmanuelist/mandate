@@ -151,7 +151,7 @@ revocation and the final withdrawal of all 40,000 sats. The records are in
 ### Mainnet probe
 
 Mainnet deployment of the vault is scheduled for milestone M2
-([docs/PLAN.md](docs/PLAN.md)). A deliberately minimal probe contract is deployed on
+([docs/PLAN.md](docs/PLAN.md)), following [MAINNET-RUNBOOK.md](MAINNET-RUNBOOK.md). A deliberately minimal probe contract is deployed on
 mainnet today. It demonstrated that a Clarity contract can deposit real sBTC into
 Zest and withdraw it:
 
@@ -302,7 +302,7 @@ To deploy an independent copy and run the same lifecycle:
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Design decisions and their rationale |
 | [docs/CONTEXT.md](docs/CONTEXT.md) | Verified facts about the contracts and tools Mandate depends on, including known pitfalls |
 | [BITFLOW-REPORT.md](BITFLOW-REPORT.md) | Analysis of why Bitflow's pools cannot pay a contract principal |
-| [MAINNET-RUNBOOK.md](MAINNET-RUNBOOK.md) | The procedure used to deploy and exercise the mainnet probe |
+| [MAINNET-RUNBOOK.md](MAINNET-RUNBOOK.md) | The procedure for deploying the vault to mainnet, with its costs, and the record of the earlier mainnet probe |
 
 ## License
 

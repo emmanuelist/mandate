@@ -156,3 +156,10 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Alternatives:** attempts signed by the owner, which wouldn't show the vault refusing the delegate; allow mode, in which a wrongly accepted call could move funds; read-only simulation, which leaves nothing on the record.
 **Consequences:** each attempt is a mined transaction and costs its fee. On mainnet the same commands produce #36's record, once the mainnet delegate record names an unlisted venue.
 **Evidence:** E-037.
+
+## D-025 · The mainnet deployment dry-runs by default, and pays the medium fee under a ceiling · 2026-10-14 · accepted
+**Context:** #34 deploys v5, its traits and the Granite adapter to mainnet from the deployer in `settings/Mainnet.toml`, and sets two caps that can never change. Mainnet transactions cost real STX and can't be undone, and Hiro's fee estimates moved by a factor of two within ten minutes (E-038).
+**Decision:** `scripts/mainnet-deploy.mjs` is a dry run unless given `--broadcast`: it reads no key, signs nothing, and prints every step with its low, medium and high fee estimates. `--broadcast` reads the seed only in its own process, stops unless the seed's first account is the expected deployer, pays each transaction's medium estimate, refuses any above 2 STX, confirms each before the next, and reads each cap back. It records to `deployments/mainnet.json` as it goes, and `npm run mainnet:verify` re-checks the record with no keys. The broadcast is the owner's to run or to authorize explicitly.
+**Alternatives:** Clarinet's deployment plans, which the probe used, and which regenerate to include every contract in the manifest unless trimmed by hand (`MAINNET-RUNBOOK.md`'s earlier version); the low estimate, which risks a long wait at a time the market moves; a fixed fee, which ignores the market either way.
+**Consequences:** the deployment costs about 3.64 STX at 2026-10-14's medium estimates. A spike above the ceiling stops the run, and a run that stops resumes from its record.
+**Evidence:** E-038.
