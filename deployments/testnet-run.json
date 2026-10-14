@@ -1,70 +1,58 @@
 {
   "network": "testnet",
+  "asset": "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token",
   "owner": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
   "delegate": "ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW",
   "vault": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v3",
+  "venue": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc",
   "steps": [
     {
-      "label": "fund the delegate's fees: 5 STX",
+      "label": "owner allowlists testnet sBTC",
       "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0xa7ecf03b68699b398858608ad01a8c6e749e61b1f9900b1d36a0b192ca90e08b",
-      "block": 719366,
-      "result": "(ok true)"
-    },
-    {
-      "label": "owner mints 1,000,000 mock",
-      "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0xabcc7e0d465a98c0294ad3f0b8d2cb2ea2cd461f8d1df682ffa0d26d7e73adf9",
-      "block": 719369,
-      "result": "(ok true)"
-    },
-    {
-      "label": "owner allowlists the asset",
-      "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0xbdd7d800fb5fd0a32156fca8bfc5d96c2ae10899e426804997520fa32f54be65",
-      "block": 719371,
+      "txid": "0x558e9850c2e5db6dff14f1d01927e17353acc221d85a44584dbee9191cce9f98",
+      "block": 719935,
       "result": "(ok true)"
     },
     {
       "label": "owner allowlists the venue",
       "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0xcd8e8dccd412434d0b3e3e681bdc4d30d06d9043dea41c6fa58dd5bcd321c296",
-      "block": 719373,
+      "txid": "0xc52068ae8706188434073581d7b6c2185235ea6720496d04cb55466e3da6eacc",
+      "block": 719937,
       "result": "(ok true)"
     },
     {
-      "label": "owner deposits 400,000",
+      "label": "owner deposits 20,000 sats",
       "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0x1b7330937d2c0d4dfec50d2023302223b9e6fc6b86dbb345ffbab22bf7852d0f",
-      "block": 719376,
+      "txid": "0xd210c8dd03fa8051bbd01d00082f883b76c5997c6b64d24f75a46b210bb75de5",
+      "block": 719939,
       "result": "(ok true)"
     },
     {
       "label": "owner grants the delegate",
       "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0xfb677877d675498fe0dfccd0f95f654aa576c9c81bb34b64eece2f315ae8c673",
-      "block": 719378,
+      "txid": "0x085c254f86569275e8bfa0cac65152a84875dde97ea676d55cc801159a25fbf9",
+      "block": 719941,
       "result": "(ok true)"
     },
     {
-      "label": "delegate allocates 100,000",
+      "label": "delegate allocates 10,000",
       "from": "ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW",
-      "txid": "0x73924838982ced49643ec0e3710b712b624fb140ed7e5e33e734a9eeb431e03f",
-      "block": 719382,
-      "result": "(ok u100000)"
+      "txid": "0x1f5c17e483098fdbd11fe14f7f083b50d02febc1c5efdb81ba9e0faad63edbf4",
+      "block": 719943,
+      "result": "(ok u10000)"
     },
     {
-      "label": "delegate unwinds 100,000",
+      "label": "delegate unwinds 10,000",
       "from": "ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW",
-      "txid": "0x43bad4af1df7ee5f48df87a9cf9b7a8f89a2981ef99f97b53248d1c5e536f2ab",
-      "block": 719384,
-      "result": "(ok u100000)"
+      "txid": "0xa7be818fc0711f31c6f372f1e7755e3506d8dcd0c4122f84b1c330d57fd815b6",
+      "block": 719945,
+      "result": "(ok u10000)"
     },
     {
-      "label": "owner withdraws 400,000",
+      "label": "owner withdraws 20,000 sats",
       "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0x1f978cfe8c63bd739e09495ca52f93b412bed98d60998ace774fa2e795cf7af5",
-      "block": 719385,
+      "txid": "0xbf277b197ad41ffc5816129ebc3c2463f7954d6baeba25b3b89d3599333f061a",
+      "block": 719947,
       "result": "(ok true)"
     }
   ],
@@ -72,14 +60,16 @@
     "before": {
       "ownerIdleInVault": "u0",
       "ownerPosition": "u0",
-      "ownerWallet": "(ok u1000000)",
-      "vaultTokens": "(ok u0)"
+      "ownerSbtc": "(ok u230000)",
+      "vaultSbtc": "(ok u0)",
+      "venueSbtc": "(ok u0)"
     },
     "after": {
       "ownerIdleInVault": "u0",
       "ownerPosition": "u0",
-      "ownerWallet": "(ok u2000000)",
-      "vaultTokens": "(ok u0)"
+      "ownerSbtc": "(ok u230000)",
+      "vaultSbtc": "(ok u0)",
+      "venueSbtc": "(ok u0)"
     }
   }
 }
