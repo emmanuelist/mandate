@@ -1,0 +1,37 @@
+# Separate manifest that forks Stacks testnet, so the testnet sBTC venue is tested
+# against testnet's official sBTC. Run: npx vitest run --config vitest.testnet.config.ts
+[project]
+name = "mandate-testnet-fork"
+description = "The vault and the testnet sBTC venue against testnet's official sBTC"
+authors = []
+telemetry = false
+cache_dir = "./.cache"
+
+[[project.requirements]]
+contract_id = "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token"
+
+[contracts.sip-010-trait]
+path = "contracts/sip-010-trait.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.venue-trait]
+path = "contracts/venue-trait.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.mandate-vault-v3]
+path = "contracts/mandate-vault-v3.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.mock-venue-sbtc]
+path = "contracts/mock-venue-sbtc.clar"
+epoch = "latest"
+clarity_version = 4
+
+[repl.remote_data]
+enabled = true
+api_url = "https://api.testnet.hiro.so"
+# Pinned to a settled block, as the mainnet forks are (D-012).
+initial_height = 719800

@@ -127,7 +127,7 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 | Slow-drip churn under the per-move cap | `allocate`: day's total would pass `max-daily-notional`, `u111` | "refuses a move that would exceed the day's notional" (v3.test.ts) |
 | Moving more than the owner has idle | `allocate`: idle balance below the amount, `u105` | "refuses a move larger than the owner's idle balance" (v3.test.ts) |
 | Probing state through policy errors | `allocate` answers identity and policy before balances: an exhausted mandate reports `u110`, not `u105` | "answers policy before state: the rate limit beats an empty balance" (v3.test.ts) |
-| Accepting a bad price on the owner's behalf | `allocate`: the floor comes from the venue's own quote, not the caller; a venue enforcing it refuses, and the vault checks shares against it, `u108` | "refuses a fill worse than the mandate's slippage, and nothing moves" (v3.test.ts) |
+| Accepting a bad price on the owner's behalf | `allocate`: the floor comes from the venue's own quote, not the caller; a venue enforcing it refuses, and the vault checks shares against it, `u108` | "refuses a fill worse than the mandate's slippage, and nothing moves" (v3.test.ts); "testnet sBTC: a fill below the slippage floor is refused, and nothing moves" (sbtc-testnet.fork.ts) |
 | Grinding the position down through many small bad fills | `allocate`, `unwind`: summed shortfall past `max-cum-slip-bps`, `u112` | "stops repeated small bleeds with the cumulative budget" (v3.test.ts) |
 | A stranger grants an owner's delegate a mandate to reach that owner's funds | mandates are keyed by (owner, delegate); `allocate` reads only the named owner's mandate, `u102` here | "a stranger can't redirect another owner's delegate" (v3.test.ts) |
 | The delegate pulling funds out | `withdraw` pays only the caller's own idle balance; the delegate has none, `u105` | "the delegate can't withdraw" (v3.test.ts) |
@@ -209,3 +209,4 @@ These show the vault working rather than refusing an attack.
 - "control: the same venue behaving honestly passes every check" (v3-hostile.test.ts)
 - "deposit, allocate, unwind, withdraw: every sat accounted for" (v3-zest-fork.test.ts)
 - "a zero-slippage mandate still allocates, because Zest fills at its quote" (v3-zest-fork.test.ts)
+- "testnet sBTC: deposit, allocate, unwind, withdraw, every sat accounted for" (sbtc-testnet.fork.ts)

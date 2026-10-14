@@ -64,7 +64,7 @@ jobs:
       - run: node scripts/spec-crosscheck.mjs
 
   tests:
-    name: clarinet tests (mainnet fork)
+    name: clarinet tests (mainnet and testnet forks)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -90,6 +90,14 @@ jobs:
           for i in 1 2 3; do
             npx vitest run --config vitest.jing.config.ts && exit 0
             echo "::warning::Jing suite attempt $i failed"
+            if [ "$i" -lt 3 ]; then sleep 60; fi
+          done
+          exit 1
+      - name: testnet suite (fork pinned at testnet block 719800), up to three attempts
+        run: |
+          for i in 1 2 3; do
+            npx vitest run --config vitest.testnet.config.ts && exit 0
+            echo "::warning::testnet suite attempt $i failed"
             if [ "$i" -lt 3 ]; then sleep 60; fi
           done
           exit 1
