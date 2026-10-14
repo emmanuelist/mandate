@@ -1,10 +1,10 @@
 # State
-_Last verified: 2026-10-14 at `aa27bdf`_
+_Last verified: 2026-10-14 at `8282568`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M2 · Mainnet Launch + Adversarial Suite (due 2026-12-05, 52 days left). M1's exit criteria are met (E-014, E-022, E-024); D-017 awaits sign-off.
-**Next action:** the Granite spike, so the owner can choose the second venue's path (#32); then the adversarial suite (#30)
-**Blocked on:** nothing for #32. The mainnet issues (#34 to #36) need the owner to fund the deployer with STX and the mandate with sBTC.
+**Next action:** the adversarial suite, at least 40 hostile-delegate cases (#30); the reference delegate (#33) can run alongside
+**Blocked on:** nothing for #30 or #33. The mainnet issues (#34 to #36) need the owner to fund the deployer with STX and the mandate with sBTC.
 
 ## Works (verified this session)
 | Capability | Verified by | Evidence |
@@ -18,7 +18,8 @@ _Last verified: 2026-10-14 at `aa27bdf`_
 | v3 measures every venue call and refuses a hostile venue's attacks with nothing moved | 7 hostile-venue tests | E-012 |
 | v3 against Zest's real sBTC vault, with no adapter: allocate, unwind, owner exit, every refusal | fork test; with the vault's own token trait, still 99,937 shares in and 99,999 sats out | E-011, D-014 |
 | The venue trait reaches Zest with no adapter | spike on a mainnet fork | E-009 |
-| Full suite, forking the pinned block 9,194,000 with two workers | `npx vitest run`: 80 of 80 tests in 18 files, in 355 s | E-022, E-027 |
+| Full suite, forking the pinned block 9,194,000 with two workers | `npx vitest run`: 84 of 84 tests in 19 files, in 522 s | E-022, E-028 |
+| v4 against Granite's USDCx lending pool through `granite-venue`: allocate, unwind, owner exit, refusals, the adapter's minimum | fork test; books match real balances to the unit | E-028, D-020 |
 | v4 identifies callers by `contract-caller`: a contract an owner calls can't act as the owner, and a contract acting for itself still can | 3 tests; the same call against v3 succeeds | E-027 |
 | v4 caps the vault's principal in each asset: refused one sat over (`u117`), room freed by withdrawals only, no deposit without a cap, set once by the deployer and never raised | 4 tests; the 42 v3 tests pass against v4 | E-026 |
 | A contract can deposit sBTC into Zest and redeem it | the probe's five transactions, fees and final balances re-read from the mainnet API; fork tests | E-002, E-004, E-022 |
@@ -44,4 +45,3 @@ The vault is not on mainnet yet; that is M2.
 
 ## Open questions
 - Is D-017 acceptable for M1, with the testnet venue as the one stand-in? The owner confirms.
-- After the spike, which Granite path the second venue takes (#32). The owner decides.

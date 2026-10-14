@@ -26,7 +26,7 @@ confined to their managers' own balance sheets.
 | Network | Deployment | Evidence |
 | --- | --- | --- |
 | Stacks testnet | The complete vault on testnet's official sBTC, with a mock yield venue. One mandate executed end to end. | E-023, E-024 |
-| Stacks mainnet, forked | The vault tested against Zest's deployed sBTC vault. The full test suite runs in continuous integration. | E-011, E-021 |
+| Stacks mainnet, forked | The vault tested against Zest's sBTC vault and, through an adapter, Granite's USDCx lending pool. The full test suite runs in continuous integration. | E-011, E-028 |
 | Stacks mainnet | A minimal probe contract that deposited sBTC into Zest and withdrew it. | E-001, E-002 |
 
 Evidence entries are recorded in [docs/EVIDENCE.md](docs/EVIDENCE.md).
@@ -57,7 +57,7 @@ interaction if they disagree.
 Version 4, the version for mainnet, adds a per-vault cap on each asset: the
 vault's principal across all owners cannot exceed it. The deployer sets each cap
 once and can never raise it, so the maximum exposure is fixed and readable
-on-chain. On mainnet the sBTC cap is 0.01 BTC. Version 4 also identifies owners
+on-chain. On mainnet the caps are 0.01 BTC of sBTC and 1,000 USDCx. Version 4 also identifies owners
 and delegates by the principal that calls it directly, so a contract an owner
 interacts with cannot act in the owner's name.
 
@@ -72,7 +72,7 @@ remote-data fork.
 | Venue | Accepts a contract principal | Notes |
 | --- | --- | --- |
 | Zest | Yes | Binds `contract-caller`; applies no `is-standard` check to recipients |
-| Granite | Yes | Same pattern; `liquidity-provider-v1` applies no `is-standard` check |
+| Granite | Yes, through an adapter | Its USDCx lending pool burns LP tokens from the caller on redeem, so `granite-venue` holds them and mints its own shares (D-020) |
 | Bitflow | No | `pool-transfer` asserts `(is-standard recipient)` |
 
 Bitflow's pools cannot pay a contract principal. The same check appears in the xyk
@@ -154,7 +154,7 @@ is required.
     npm ci
     npx vitest run
 
-The full suite comprises 80 tests in 18 files and completes in approximately 6 to 8
+The full suite comprises 84 tests in 19 files and completes in approximately 6 to 9
 minutes. It forks mainnet at block 9,194,000 (`initial_height` in `Clarinet.toml`),
 so results do not change as mainnet advances. Results are final only once the
 summary line has been printed.
@@ -231,6 +231,7 @@ To deploy an independent copy and run the same lifecycle:
       mandate-vault-v4.clar       The vault: v3 under a per-vault AUM cap, the version for mainnet
       mandate-vault-v3.clar       The vault as deployed on testnet for M1
       venue-trait.clar            The interface the vault requires of a venue; Zest's vault conforms as deployed
+      granite-venue.clar          Adapter for Granite's USDCx lending pool, the second venue
       sip-010-trait.clar          The standard token trait, included so that one source deploys on every network
       mock-venue-sbtc.clar        Stand-in yield venue holding testnet sBTC, for testnet and its fork
       mock-token.clar             Stand-in for sBTC in the tests and the earlier testnet run
@@ -240,7 +241,7 @@ To deploy an independent copy and run the same lifecycle:
       mandate-vault-v2.clar       Second version, retained with its tests
       mandate-probe-mainnet.clar  The minimal probe deployed on mainnet
       *probe.clar, venue-spike.clar   Exploratory contracts behind the venue findings
-    tests/                        80 tests in 18 files, plus the Jing and testnet fork tests
+    tests/                        84 tests in 19 files, plus the Jing and testnet fork tests
     scripts/                      Testnet deployment, execution and verification; the specification check
     deployments/                  Testnet deployment records
     docs/                         Specification, plan, decisions, evidence and verified dependency facts
