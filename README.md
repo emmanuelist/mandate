@@ -37,6 +37,45 @@ zero shares. Whole exercise cost 0.405 STX.
 
 Contract: `SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH.mandate-probe-mainnet`
 
+## Testnet
+
+The full vault runs on Stacks testnet. Testnet was reset in August 2026 and has
+no sBTC and no Zest, so the testnet run uses a mock sBTC and a mock venue behind
+the same venue trait Zest satisfies. The vault against Zest's real contract is
+tested on a mainnet fork (`tests/v3-zest-fork.test.ts`).
+
+| Contract | Address | Deployed |
+|----------|---------|----------|
+| Vault | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v3` | [block 719,267](https://explorer.hiro.so/txid/0x26400b07e407980984c89c9da2cf61ff469202e4c14eb97af4241e3a91700ce6?chain=testnet) |
+| Mock sBTC | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-token` | [block 719,263](https://explorer.hiro.so/txid/0xa9ff4fbe791268326039434dfa0222333bf3a8717efcef0ab76db5dd463c2a6e?chain=testnet) |
+| Mock venue | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue` | [block 719,265](https://explorer.hiro.so/txid/0xc9de22d0954b5f53fa05c5ca1ea8451b258bd4790aad4e8929b32200ef0f6439?chain=testnet) |
+| Token trait | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.sip-010-trait` | [block 719,259](https://explorer.hiro.so/txid/0x166a1bab5b3105827474def3ee7db1635006818573490b89f7ef8781538f23ee?chain=testnet) |
+| Venue trait | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.venue-trait` | [block 719,260](https://explorer.hiro.so/txid/0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b?chain=testnet) |
+
+One mandate, end to end, one transaction per step (the run recorded in
+`deployments/testnet-run.json`):
+
+| Step | Result | Transaction |
+|------|--------|-------------|
+| Owner deposits 400,000 | `(ok true)` | [block 719,376](https://explorer.hiro.so/txid/0x1b7330937d2c0d4dfec50d2023302223b9e6fc6b86dbb345ffbab22bf7852d0f?chain=testnet) |
+| Owner grants the delegate a mandate | `(ok true)` | [block 719,378](https://explorer.hiro.so/txid/0xfb677877d675498fe0dfccd0f95f654aa576c9c81bb34b64eece2f315ae8c673?chain=testnet) |
+| Delegate allocates 100,000 to the venue | `(ok u100000)` | [block 719,382](https://explorer.hiro.so/txid/0x73924838982ced49643ec0e3710b712b624fb140ed7e5e33e734a9eeb431e03f?chain=testnet) |
+| Delegate unwinds the position | `(ok u100000)` | [block 719,384](https://explorer.hiro.so/txid/0x43bad4af1df7ee5f48df87a9cf9b7a8f89a2981ef99f97b53248d1c5e536f2ab?chain=testnet) |
+| Owner withdraws all 400,000 | `(ok true)` | [block 719,385](https://explorer.hiro.so/txid/0x1f978cfe8c63bd739e09495ca52f93b412bed98d60998ace774fa2e795cf7af5?chain=testnet) |
+
+Afterwards the vault holds none of the owner's tokens and the owner's wallet holds
+all of them. The setup steps and every hash are in
+[docs/EVIDENCE.md](docs/EVIDENCE.md) (E-017 to E-019).
+
+To check the recorded deployment and run against the chain, with no keys:
+
+    npm ci && npm run testnet:verify
+
+To deploy your own copy and run the same lifecycle, put a testnet-only seed in
+`settings/Testnet.toml` as `mnemonic = "<words>"`, give its first account at least
+8.11 testnet STX, and run `npm run testnet`. The second account acts as the
+delegate.
+
 ## The policy surface
 
 Every constraint is an integer check against on-chain reads. No oracle.

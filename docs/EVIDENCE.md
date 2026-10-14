@@ -19,6 +19,9 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-014 | 2026-10-13 | `docs/SPEC.md` names all 37 tests in the v3 suites, each beside the attack it shows refused or as a lifecycle test, and a check fails if one goes missing. The parameter edges it states were checked in the simulator: `window-len` 0 lets three allocations through a one-trade window, `max-slip-bps` 10,001 aborts `allocate`, and re-granting resets an exhausted slippage budget | `node scripts/spec-crosscheck.mjs`; a simulator probe (output below) | `9e58f5d` |
 | E-015 | 2026-10-13 | CI without the fork-data cache and with up to three attempts per fork suite passes on its first attempt: 68 tests across 17 files and the Jing suite's 1, with 13 rate-limit waits, no worker failures and no panics | [CI run 38481444141](https://github.com/emmanuelist/mandate/actions/runs/38481444141) (#19) | `1957a28` |
 | E-016 | 2026-10-14 | `grant` refuses a zero-length rate window, per-move slippage above 100% and a slippage budget above 100% (`u116`), accepts the boundaries, and a refused grant leaves the existing mandate in force. The spec check caught the five new tests before the spec named them. Full suite: 73 tests across 17 files | `tests/v3.test.ts`; `node scripts/spec-crosscheck.mjs`; `npx vitest run` | `afbdf1e` |
+| E-017 | 2026-10-14 | The M1 contracts are deployed on Stacks testnet under `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5`, each with the repo's source and Clarity version: `mandate-vault-v3`, a mock sBTC (`mock-token`), a mock venue (`mock-venue`) and the two traits the vault uses | deploy transactions: [mandate-vault-v3](https://explorer.hiro.so/txid/0x26400b07e407980984c89c9da2cf61ff469202e4c14eb97af4241e3a91700ce6?chain=testnet) · [mock-token](https://explorer.hiro.so/txid/0xa9ff4fbe791268326039434dfa0222333bf3a8717efcef0ab76db5dd463c2a6e?chain=testnet) · [mock-venue](https://explorer.hiro.so/txid/0xc9de22d0954b5f53fa05c5ca1ea8451b258bd4790aad4e8929b32200ef0f6439?chain=testnet) · [sip-010-trait](https://explorer.hiro.so/txid/0x166a1bab5b3105827474def3ee7db1635006818573490b89f7ef8781538f23ee?chain=testnet) · [venue-trait](https://explorer.hiro.so/txid/0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b?chain=testnet), blocks 719,259 to 719,267; `npm run testnet:verify` (output below) | `f00508b` |
+| E-018 | 2026-10-14 | One mandate end to end on testnet, one transaction per step: the owner deposits 400,000 mock sBTC and grants a delegate, the delegate allocates 100,000 into the mock venue and unwinds it, and the owner withdraws all 400,000. Afterwards the owner's vault balance and position and the vault's tokens are zero, and the owner's wallet holds all 1,000,000 minted | [deposit](https://explorer.hiro.so/txid/0xcc2bd1d810ff14b4e062d73d28ea797ed2b6582c7cf3dfaa287fa66f5aa60e99?chain=testnet) `(ok true)` · [grant](https://explorer.hiro.so/txid/0x37d9f9c90177209edecb94bc08fc62a2b0436f2d0d97a223b24eb23ffc80d5ad?chain=testnet) `(ok true)` · [allocate](https://explorer.hiro.so/txid/0x5ec913434edac52e3931ffeff81d1dac5ce7d85d60deb35380dcbb223ffa7363?chain=testnet) `(ok u100000)` · [unwind](https://explorer.hiro.so/txid/0xeb6f3bb4678fd50f4616e14d15cf49391b86fd18499c38a2fdd97cd615930b68?chain=testnet) `(ok u100000)` · [withdraw](https://explorer.hiro.so/txid/0xfe071e940bcd51510c8cf451b99ec2a46b8e9752cdcba546076843a1e14c1974?chain=testnet) `(ok true)`; blocks 719,271 to 719,287. All nine steps, with the reads after, are in `deployments/testnet-run.json` at `7f65fef`, re-read from the chain in E-017's output | `7f65fef` |
+| E-019 | 2026-10-14 | Rebuilding is one command. On the deployed contracts, `npm run testnet` finds all five identical to the repo and sends no deploys, then repeats the lifecycle, and the books reconcile against reads taken before the run; the script fails if they don't. With a contract edited locally, the deploy step stops before sending anything and `npm run testnet:verify` fails. A fresh run costs account 1 8.11 STX: 2.5 in deploy fees, 0.61 in call fees, and 5 sent to the delegate | [deposit](https://explorer.hiro.so/txid/0x1b7330937d2c0d4dfec50d2023302223b9e6fc6b86dbb345ffbab22bf7852d0f?chain=testnet) `(ok true)` · [grant](https://explorer.hiro.so/txid/0xfb677877d675498fe0dfccd0f95f654aa576c9c81bb34b64eece2f315ae8c673?chain=testnet) `(ok true)` · [allocate](https://explorer.hiro.so/txid/0x73924838982ced49643ec0e3710b712b624fb140ed7e5e33e734a9eeb431e03f?chain=testnet) `(ok u100000)` · [unwind](https://explorer.hiro.so/txid/0x43bad4af1df7ee5f48df87a9cf9b7a8f89a2981ef99f97b53248d1c5e536f2ab?chain=testnet) `(ok u100000)` · [withdraw](https://explorer.hiro.so/txid/0x1f978cfe8c63bd739e09495ca52f93b412bed98d60998ace774fa2e795cf7af5?chain=testnet) `(ok true)`; blocks 719,366 to 719,385; output below | `0706d6d` |
 
 ### E-001 output
 ~~~text
@@ -205,4 +208,71 @@ window-len 0, 1 trade allowed: 1st (ok u1000) 2nd (ok u1000) 3rd (ok u1000)
 window-len 144, 1 trade allowed: 1st (ok u1000) 2nd (err u110)
 max-slip-bps 10001: threw: Call contract function error: mandate-vault-v3::allocate(...)
 cum budget 100, 0.6% fills: 1st (ok u994) 2nd (err u112) | re-grant | next (ok u994)
+~~~
+
+### E-017 output
+~~~text
+# 2026-10-14, the first run's records (7f65fef), checked with no keys:
+$ npm run testnet:verify
+contracts deployed by ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5:
+  ok   sip-010-trait     block 719259, Clarity 4, source identical to the repo
+  ok   venue-trait       block 719260, Clarity 4, source identical to the repo
+  ok   mock-token        block 719263, Clarity 3, source identical to the repo
+  ok   mock-venue        block 719265, Clarity 4, source identical to the repo
+  ok   mandate-vault-v3  block 719267, Clarity 4, source identical to the repo
+end-to-end run, owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5, delegate ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW:
+  ok   fund the delegate's fees: 5 STX  success, block 719271, (ok true)
+  ok   owner mints 1,000,000 mock       success, block 719273, (ok true)
+  ok   owner allowlists the asset       success, block 719275, (ok true)
+  ok   owner allowlists the venue       success, block 719277, (ok true)
+  ok   owner deposits 400,000           success, block 719279, (ok true)
+  ok   owner grants the delegate        success, block 719281, (ok true)
+  ok   delegate allocates 100,000       success, block 719283, (ok u100000)
+  ok   delegate unwinds 100,000         success, block 719285, (ok u100000)
+  ok   owner withdraws 400,000          success, block 719287, (ok true)
+all 14 checks pass
+
+# the reads after that run (deployments/testnet-run.json at 7f65fef):
+{"ownerIdleInVault":"u0","ownerPosition":"u0","ownerWallet":"(ok u1000000)","vaultTokens":"(ok u0)"}
+~~~
+
+### E-019 output
+~~~text
+$ npm run testnet
+deployer ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5
+  sip-010-trait     already deployed, identical to the repo   0x166a1bab5b3105827474def3ee7db1635006818573490b89f7ef8781538f23ee
+  venue-trait       already deployed, identical to the repo   0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b
+  mock-token        already deployed, identical to the repo   0xa9ff4fbe791268326039434dfa0222333bf3a8717efcef0ab76db5dd463c2a6e
+  mock-venue        already deployed, identical to the repo   0xc9de22d0954b5f53fa05c5ca1ea8451b258bd4790aad4e8929b32200ef0f6439
+  mandate-vault-v3  already deployed, identical to the repo   0x26400b07e407980984c89c9da2cf61ff469202e4c14eb97af4241e3a91700ce6
+wrote deployments/testnet.json
+owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5
+delegate ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW
+  fund the delegate's fees: 5 STX 0xa7ecf03b68699b398858608ad01a8c6e749e61b1f9900b1d36a0b192ca90e08b ... (ok true), block 719366
+  owner mints 1,000,000 mock     0xabcc7e0d465a98c0294ad3f0b8d2cb2ea2cd461f8d1df682ffa0d26d7e73adf9 ... (ok true), block 719369
+  owner allowlists the asset     0xbdd7d800fb5fd0a32156fca8bfc5d96c2ae10899e426804997520fa32f54be65 ... (ok true), block 719371
+  owner allowlists the venue     0xcd8e8dccd412434d0b3e3e681bdc4d30d06d9043dea41c6fa58dd5bcd321c296 ... (ok true), block 719373
+  owner deposits 400,000         0x1b7330937d2c0d4dfec50d2023302223b9e6fc6b86dbb345ffbab22bf7852d0f ... (ok true), block 719376
+  owner grants the delegate      0xfb677877d675498fe0dfccd0f95f654aa576c9c81bb34b64eece2f315ae8c673 ... (ok true), block 719378
+  delegate allocates 100,000     0x73924838982ced49643ec0e3710b712b624fb140ed7e5e33e734a9eeb431e03f ... (ok u100000), block 719382
+  delegate unwinds 100,000       0x43bad4af1df7ee5f48df87a9cf9b7a8f89a2981ef99f97b53248d1c5e536f2ab ... (ok u100000), block 719384
+  owner withdraws 400,000        0x1f978cfe8c63bd739e09495ca52f93b412bed98d60998ace774fa2e795cf7af5 ... (ok true), block 719385
+books reconcile, before: {"ownerIdleInVault":"u0","ownerPosition":"u0","ownerWallet":"(ok u1000000)","vaultTokens":"(ok u0)"} 
+                  after:  {"ownerIdleInVault":"u0","ownerPosition":"u0","ownerWallet":"(ok u2000000)","vaultTokens":"(ok u0)"}
+wrote deployments/testnet-run.json
+exit 0 · elapsed 124 s
+
+# the rerun's records then pass `npm run testnet:verify`: all 14 checks pass.
+# account 1: 500 STX before the first run, 486.28 after both runs (8.11 + 5.61).
+
+# with contracts/mock-venue.clar edited locally:
+$ npm run testnet:verify
+  FAIL mock-venue        block 719265, Clarity 4, source DIFFERS from the repo
+1 of 14 checks failed
+(exit code 1)
+$ node scripts/testnet-deploy.mjs
+  sip-010-trait     already deployed, identical to the repo   0x166a1bab5b3105827474def3ee7db1635006818573490b89f7ef8781538f23ee
+  venue-trait       already deployed, identical to the repo   0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b
+  mock-token        already deployed, identical to the repo   0xa9ff4fbe791268326039434dfa0222333bf3a8717efcef0ab76db5dd463c2a6e
+Error: ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue was deployed from a different contracts/mock-venue.clar: deploy from a fresh testnet account
 ~~~

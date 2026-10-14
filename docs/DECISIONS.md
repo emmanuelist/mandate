@@ -80,3 +80,10 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Decision:** CI fetches fork data fresh on every run, and runs each fork suite up to three times, stopping at the first pass. The forks stay pinned and the run keeps two workers.
 **Alternatives:** keep the cache, which saves requests but was present when a run read wrong data, a worse failure than a worker that can't start; one worker at a time, which lowers the load but doesn't remove the rate limit and roughly doubles the run; an API key, which the SDK can't send.
 **Consequences:** the forks are pinned and the suite has no randomness, so a real failure fails all three attempts, while a rate-limit failure usually doesn't. A bad day costs up to three runs, so the job's limit is 45 minutes. Each failed attempt leaves a warning in the log.
+
+## D-014 · The vault carries its own copy of the SIP-010 trait · 2026-10-14 · accepted
+**Context:** v3 named the standard SIP-010 trait by its mainnet address, `SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard`. Testnet's reset on 2026-08-05 erased the testnet copies: neither `ST3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8NQXMNRQ` (the same deployer on testnet) nor `ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT` has the contract, so v3 couldn't deploy there (#7).
+**Decision:** `contracts/sip-010-trait.clar` is a verbatim copy of mainnet's trait, and v3 and the mock token use it. Clarity matches traits by shape (`docs/CONTEXT.md`), so real sBTC, which declares mainnet's trait, still passes as this one.
+**Alternatives:** pointing v3 at a copy deployed on testnet, which gives each network a different source, so testnet wouldn't run the code the tests run.
+**Consequences:** one source runs in the tests, on testnet and, in M2, on mainnet, and `npm run testnet` refuses to run against a deployment whose source differs from the repo's. On a mainnet fork, sBTC still fits, Zest gives the same 99,937 shares in and 99,999 sats out, and the full suite passes.
+**Evidence:** E-017, E-011.

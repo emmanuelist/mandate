@@ -37,14 +37,16 @@ Then say the next action back before starting work.
 ## Stack and commands
 - Clarity 4 contracts in `contracts/`; Clarinet 3.24.1, `@stacks/clarinet-sdk` 3.23.2, Vitest 4, Node 26.
 - `npm ci` once.
-- `npx vitest run` runs the full suite in about 2 minutes. Every test forks Stacks mainnet through api.hiro.so (`[repl.remote_data]` in `Clarinet.toml`). Wait for the summary line: partial output gives wrong counts.
+- `npx vitest run` runs the full suite in about 6 to 8 minutes. Every test forks Stacks mainnet through api.hiro.so (`[repl.remote_data]` in `Clarinet.toml`). Wait for the summary line: partial output gives wrong counts.
 - `npx vitest run --config vitest.jing.config.ts` runs the Jing fork, pinned at block 9,036,500 by `Clarinet-jing.toml`.
-- `settings/Mainnet.toml` holds the deployer mnemonic. It's gitignored: never print or commit it.
+- `npm run testnet` deploys the five M1 contracts to testnet from account 1 of `settings/Testnet.toml`, then runs one mandate end to end with account 2 as the delegate, and records both in `deployments/`. It skips a contract already deployed with the repo's source and stops if the source differs. A fresh account spends 8.11 testnet STX.
+- `npm run testnet:verify` re-checks `deployments/` against the chain with no keys; `npm run testnet:accounts` prints both testnet addresses and their balances.
+- `settings/Mainnet.toml` holds the mainnet deployer mnemonic and `settings/Testnet.toml` a testnet-only seed. Both are gitignored: never print or commit them.
 
 ## Clarity 4 notes
 - The vault moves its own funds with `as-contract?` and explicit allowances, for example `(as-contract? ((with-ft <token> "<asset>" <amount>)) body)`. The body's last expression can't be a response, so put `try!` inside it.
 - `tx-sender` versus `contract-caller` decides who pays. Zest takes funds from `contract-caller` (`docs/CONTEXT.md`).
-- Venues don't share one SIP-010 trait: Bitflow defines its own, and Granite and Jing use the canonical one.
+- Venues don't share one SIP-010 trait: Bitflow defines its own, and Granite and Jing use the canonical one. The vault uses a verbatim copy of the canonical one, `contracts/sip-010-trait.clar`, so the same source deploys on testnet, where the reset erased the original (D-014).
 
 ## Session protocol
 - **Start:** the four steps above.
