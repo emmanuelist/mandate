@@ -31,6 +31,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-026 | 2026-10-14 | v4 enforces the per-vault AUM cap. Deposits up to the cap succeed across owners, and one sat over is refused with nothing moved (`u117`). A withdrawal frees room under it, and moving funds into a venue does not. An asset without a cap can't be deposited. Only the deployer sets a cap, once, never zero, and it can't be raised (`u118`, `u116`, `u119`). The 42 tests moved from v3 pass against v4 with caps set, and the full suite passes: 77 tests in 17 files | `npx vitest run tests/v4.test.ts` and `npx vitest run` (output below) | `0e29ba6` |
 | E-027 | 2026-10-14 | A contract an owner calls could act as the owner against v3, and can't against v4. Against v3, one call to a contract posing as an airdrop moved the owner's 400,000 idle tokens into the attacker's venue, which never pays them back. Against v4 the same call is refused (`u100`) with nothing moved, and a contract owner acting for itself from inside `as-contract?` still deposits and withdraws. The v4 suites pass with the change, 49 tests, and the hostile venue's callback is still refused (`u105`). The full suite passes: 80 tests in 18 files | `npx vitest run tests/phishing.test.ts` (output below) | `aa27bdf` |
 | E-028 | 2026-10-14 | v4 works with Granite's USDCx lending pool through `granite-venue`, on a mainnet fork. A real USDCx holder's mandate allocates 100 USDCx for 99,799,935 shares against a quote of 99,801,116; the vault holds the adapter's shares and the adapter exactly as many Granite LP tokens. The unwind returns 99.999999 USDCx, the books match real balances to the unit, and the adapter keeps nothing. Policy refusals hold (`u102`, `u100`), the owner exits alone after revoking, and a minimum above the quote is refused by the adapter (`u301`) with nothing moved. The full suite passes: 84 tests in 19 files | `npx vitest run tests/v4-granite-fork.test.ts` and `npx vitest run` (output below) | `8282568` |
+| E-029 | 2026-10-14 | The adversarial suite: 43 hostile-delegate cases against v4, all refused with the exact code, no asset events and no balance changed, across seven classes: 8 oversized orders, 6 unlisted assets, 7 substituted venues, 6 rate-limit races, 6 expiry and revocation, 7 reaching another owner's balance and 3 withdrawing outright. Two deliberate mutants, a wrong expected code and a legal move wrapped as an attack, make it fail, so it isn't vacuous. The full suite passes: 127 tests in 20 files | `npx vitest run tests/v4-adversarial.test.ts` (output below) | `075f4f3` |
 
 ### E-001 output
 ~~~text
@@ -507,4 +508,21 @@ $ npx vitest run
  Test Files  19 passed (19)
       Tests  84 passed (84)
 exit 0 in 522 s
+~~~
+
+### E-029 output
+~~~text
+$ npx vitest run tests/v4-adversarial.test.ts --reporter=verbose
+ Test Files  1 passed (1)
+      Tests  43 passed (43)
+
+# the same suite with two mutants in a throwaway copy
+  failed as it should: MUTANT wrong code
+  failed as it should: MUTANT a legal move
+      Tests  2 failed | 41 passed (43)
+
+$ npx vitest run
+ Test Files  20 passed (20)
+      Tests  127 passed (127)
+exit 0 in 483 s
 ~~~

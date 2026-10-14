@@ -154,7 +154,7 @@ is required.
     npm ci
     npx vitest run
 
-The full suite comprises 84 tests in 19 files and completes in approximately 6 to 9
+The full suite comprises 127 tests in 20 files and completes in approximately 6 to 9
 minutes. It forks mainnet at block 9,194,000 (`initial_height` in `Clarinet.toml`),
 so results do not change as mainnet advances. Results are final only once the
 summary line has been printed.
@@ -241,7 +241,7 @@ To deploy an independent copy and run the same lifecycle:
       mandate-vault-v2.clar       Second version, retained with its tests
       mandate-probe-mainnet.clar  The minimal probe deployed on mainnet
       *probe.clar, venue-spike.clar   Exploratory contracts behind the venue findings
-    tests/                        84 tests in 19 files, plus the Jing and testnet fork tests
+    tests/                        127 tests in 20 files, plus the Jing and testnet fork tests
     scripts/                      Testnet deployment, execution and verification; the specification check
     deployments/                  Testnet deployment records
     docs/                         Specification, plan, decisions, evidence and verified dependency facts
