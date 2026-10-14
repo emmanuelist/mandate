@@ -33,6 +33,18 @@ contract_id = "SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-sbtc"
 contract_id = "SPSX722NK9V3A8D3CVQT0CDY4EBQ3E9FSDDE61FT.borrower-v1"
 
 [[project.requirements]]
+contract_id = "SPSX722NK9V3A8D3CVQT0CDY4EBQ3E9FSDDE61FT.liquidity-provider-v1"
+
+[[project.requirements]]
+contract_id = "SP3M2BYF7RGF8WKW5FVDNJ6WR8D7AR9BHDXAKPXZE.state-v1"
+
+[[project.requirements]]
+contract_id = "SP3M2BYF7RGF8WKW5FVDNJ6WR8D7AR9BHDXAKPXZE.math-v1"
+
+[[project.requirements]]
+contract_id = "SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx"
+
+[[project.requirements]]
 contract_id = "SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7.v0-vault-stx"
 
 [[project.requirements]]
@@ -123,6 +135,11 @@ clarity_version = 4
 
 [contracts.mandate-vault-v4]
 path = "contracts/mandate-vault-v4.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.granite-venue]
+path = "contracts/granite-venue.clar"
 epoch = "latest"
 clarity_version = 4
 

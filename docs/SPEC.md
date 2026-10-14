@@ -7,7 +7,7 @@ Covers `contracts/mandate-vault-v4.clar` and `contracts/venue-trait.clar`. v4 is
 - **Owner:** deposits assets, sets their own allowlists and mandates, and can always withdraw and unwind their own positions.
 - **Delegate:** a principal the owner grants a mandate. It can move that owner's funds between the owner's idle balance and the owner's allowlisted venues, and nothing else.
 - **Deployer:** the account that deployed the contract. Its one power is setting each asset's cap, once (`set-cap`).
-- **Venue:** a contract with the venue trait's shape (`convert-to-shares`, `convert-to-assets`, `deposit`, `redeem`, `get-balance`). Zest's v0 vaults satisfy it as deployed (D-009).
+- **Venue:** a contract with the venue trait's shape (`convert-to-shares`, `convert-to-assets`, `deposit`, `redeem`, `get-balance`). Zest's v0 vaults satisfy it as deployed (D-009). Granite's USDCx lending pool is reached through an adapter, `granite-venue`, which holds Granite's LP tokens and mints its own shares, one per LP token (D-020).
 - **Assets:** SIP-010 tokens, each under a cap. Native STX is not supported (D-016).
 
 One contract holds every owner's funds, with separate books per owner.
@@ -123,6 +123,7 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 ### Trust assumptions
 
 - A Clarity contract can't change after deployment. The vault has no pause or upgrade path, and its deployer's only power is setting each asset's cap once.
+- The Granite adapter holds every owner's Granite LP tokens, so its code is trusted that far; the cap bounds what it can hold.
 - An owner chooses their venues. A venue answers for its own share ledger (`get-balance`), so a venue on an owner's list is trusted that far, and no further.
 - Time is Bitcoin block height.
 
@@ -179,12 +180,16 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 | A venue reports more assets than it paid | balances are read before and after; reported above received, `u114` | "pays less than it reports on redeem: refused, for the delegate and the owner" (v4-hostile.test.ts) |
 | A venue burns more of the vault's shares than asked, eating another owner's position | the allowance is exactly the shares asked; `(err u0)`; the burn is also measured, `u114` | "burns more shares than asked: refused, and another owner's shares are safe" (v4-hostile.test.ts) |
 
-**E. A real venue: Zest**
+**E. Real venues: Zest and Granite**
 
 | Attack or failure | Stopped by | Test |
 |---|---|---|
 | Any of group A against Zest's real sBTC vault | the same checks, which run before the venue is called | "policy refusals hold with Zest as the venue, and nothing leaves the vault" (v4-zest-fork.test.ts) |
 | Using Zest when the owner hasn't listed it, or listed it for another asset, or acting without a mandate | `u107`, `u107`, `u100` | "refuses Zest unless the owner allowlisted it, for sBTC" (v4-zest-fork.test.ts) |
+
+| Any of group A against Granite's pool, through the adapter | the same checks, which run before the venue is called | "Granite: policy refusals hold through the adapter, and nothing leaves the vault" (v4-granite-fork.test.ts) |
+| Revoking a delegate strands funds in Granite | `owner-unwind` and `withdraw` need no mandate; the revoked delegate gets `u100` | "Granite: the owner exits without a mandate after revoking, then withdraws" (v4-granite-fork.test.ts) |
+| A fill below the minimum, at a pool that takes none | the adapter checks the LP tokens that arrived against the minimum, `u301`, and the vault checks shares against its floor | "Granite: the adapter enforces the minimum Granite doesn't take, and nothing moves" (v4-granite-fork.test.ts) |
 
 **F. Bad mandate parameters**
 
@@ -214,7 +219,7 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 
 ### Residual risks: not stopped by the contract
 
-- **A venue that pauses, loses funds or fails.** The owner bears venue risk, and a paused venue blocks unwinding until it resumes.
+- **A venue that pauses, loses funds or fails.** The owner bears venue risk, and a paused venue blocks unwinding until it resumes. Granite's operators can pause withdrawals, and its withdrawals need unborrowed liquidity, so an unwind from Granite can wait.
 - **A venue that lies consistently**, in both its `deposit` result and its own `get-balance`. The owner's allowlist is the anchor.
 - **An owner's own choices:** listing a hostile venue, or granting wide limits.
 - **A compromised owner key**, which controls that owner's books entirely.
@@ -240,4 +245,5 @@ These show the vault working rather than refusing an attack.
 - "control: the same venue behaving honestly passes every check" (v4-hostile.test.ts)
 - "deposit, allocate, unwind, withdraw: every sat accounted for" (v4-zest-fork.test.ts)
 - "a zero-slippage mandate still allocates, because Zest fills at its quote" (v4-zest-fork.test.ts)
+- "Granite: deposit, allocate, unwind, withdraw: every unit accounted for" (v4-granite-fork.test.ts)
 - "testnet sBTC: deposit, allocate, unwind, withdraw, every sat accounted for" (sbtc-testnet.fork.ts)
