@@ -94,3 +94,9 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Alternatives:** running the Jing suite before the full suite's burst of requests, which avoids this case but not a worker failing mid-suite (#19); waiting before every suite, which costs a minute on every run rather than only after a failure.
 **Consequences:** a real failure takes two minutes longer to report, well inside the job's 45. That a worker can't start because its first fork requests are rate-limited is inferred from the timing, not traced inside the SDK.
 **Evidence:** E-020, E-021.
+
+## D-016 · The vault holds SIP-010 tokens only; native STX is out of scope · 2026-10-14 · accepted
+**Context:** v3 moves assets under `as-contract?` allowances of the form `with-ft`, which cover SIP-010 tokens. Native STX would need a `with-stx` allowance and its own transfer path. `docs/STATE.md` listed the gap, but nothing recorded why it's acceptable.
+**Decision:** the vault holds SIP-010 tokens only. sBTC is one, and so is every asset the venues in scope take from the vault.
+**Alternatives:** a native STX path, with its own allowance, deposit, withdrawal and tests, for no venue in M1 to M3.
+**Consequences:** an owner can't deposit native STX. Revisit if a venue that takes native STX, such as STX staking, comes into scope.

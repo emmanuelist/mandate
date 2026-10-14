@@ -13,3 +13,4 @@ Deliberately not being built. Each entry links the decision that cut it.
 - Exit criteria that wait on another team (D-003).
 - An owner-facing app as a committed deliverable; M3 commits to the public ledger page (D-007).
 - An external audit at this stage; the AUM cap bounds exposure until one is done (D-008).
+- Native STX as a vault asset: sBTC and every venue asset in scope are SIP-010 tokens (D-016).
