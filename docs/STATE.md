@@ -1,10 +1,10 @@
 # State
-_Last verified: 2026-10-14 at `68be905`_
+_Last verified: 2026-10-14 at `1480803`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M2 · Mainnet Launch + Adversarial Suite (due 2026-12-05, 52 days left). M1's exit criteria are met (E-014, E-022, E-024); D-017 awaits sign-off.
-**Next action:** static checks and the findings log (#37)
-**Blocked on:** nothing for #37. The mainnet issues (#34 to #36) need the owner to fund the deployer with STX and the mandate with sBTC and about 20 USDCx.
+**Next action:** fix #48, a critical flaw the review found in v4: v5 refuses every call that writes while one of its functions that calls a venue is running. Then the findings log and static checks (#37)
+**Blocked on:** nothing for #48. The mainnet issues (#34 to #36) wait for #48, and need the owner to fund the deployer with STX and the mandate with sBTC and about 20 USDCx.
 
 ## Works (verified this session)
 | Capability | Verified by | Evidence |
@@ -16,11 +16,11 @@ _Last verified: 2026-10-14 at `68be905`_
 | The vault and the testnet sBTC venue against testnet's official sBTC, on a testnet fork | 2 tests, pinned at testnet block 719,800 | E-023 |
 | `npm run testnet` rebuilds and reruns in one command, and stops rather than run against a stale deployment | reruns on the live deployment; a contract edited locally | E-019, E-024 |
 | v3: the delegate allocates and unwinds through the venue trait; every v2 limit and fix holds; the owner can always unwind | 23 tests against a deterministic venue | E-010 |
-| v3 measures every venue call and refuses a hostile venue's attacks with nothing moved | 7 hostile-venue tests | E-012 |
+| v3 measures every venue call and refuses the hostile venue's five tested attacks with nothing moved. It misses a venue that re-enters with a deposit during an unwind (#48) | 7 hostile-venue tests | E-012 |
 | v3 against Zest's real sBTC vault, with no adapter: allocate, unwind, owner exit, every refusal | fork test; with the vault's own token trait, still 99,937 shares in and 99,999 sats out | E-011, D-014 |
 | The venue trait reaches Zest with no adapter | spike on a mainnet fork | E-009 |
 | Local suites, with no fork: 95 tests in 6 files in about 6 s | `npx vitest run --config vitest.local.config.ts` | E-032, E-033 |
-| Invariants hold over random sequences: the vault's tokens match the owners' idle balances, its venue shares match their positions, no delegate's tokens grow, and every owner can always exit | two walks of 400 steps; a mutant fails at its step | E-033 |
+| Invariants hold over random sequences with an honest venue: the vault's tokens match the owners' idle balances, its venue shares match their positions, no delegate's tokens grow, and every owner can always exit | two walks of 400 steps; a mutant fails at its step | E-033 |
 | Fork suite, forking the pinned block 9,194,000 with two workers: 41 tests in 16 files | `npx vitest run`, 465 s | E-032 |
 | The adversarial suite: 43 hostile-delegate cases across seven classes, each refused with the exact code, no asset events and no balance changed | `tests/v4-adversarial.test.ts`; two mutants make it fail | E-029 |
 | v4 against Granite's USDCx lending pool through `granite-venue`: allocate, unwind, owner exit, refusals, the adapter's minimum | fork test; books match real balances to the unit | E-028, D-020 |
@@ -45,7 +45,8 @@ The vault is not on mainnet yet; that is M2.
 
 ## Broken or unverified
 - v3 stays on testnet as M1's record and still identifies callers by `tx-sender` (E-027). Nothing uses it now that v4 runs there (E-030).
-- CI's rate-limit waits reached 24 a run before the local suites stopped forking; how far that brings them down is measured on #45.
+- **v3 and v4 credit a venue's re-entrant deposit twice during an unwind**, so an owner who lists their own venue can take other owners' funds (#48, with a probe on v4). Both are on testnet only, and v4 must not go to mainnet.
+- CI's fork suite still waits on Hiro's rate limit 11 to 14 times a run after #45; the 93 local tests wait none (E-034).
 - Jing fills: untested, since settlement needs a signed Pyth update.
 
 ## Open questions
