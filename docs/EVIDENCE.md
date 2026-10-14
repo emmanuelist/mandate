@@ -29,6 +29,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-024 | 2026-10-14 | M1's lifecycle on testnet with testnet's official sBTC, one transaction per step: the owner deposits 20,000 sats and grants a delegate, the delegate allocates 10,000 into the testnet sBTC venue and unwinds them, and the owner withdraws all 20,000. The transfer events show the sBTC moving from owner to vault, vault to venue, venue to vault and vault to owner, and the books end where they started. `npm run testnet` deployed only the new venue, finding the other three contracts identical to the repo | [deposit](https://explorer.hiro.so/txid/0xd210c8dd03fa8051bbd01d00082f883b76c5997c6b64d24f75a46b210bb75de5?chain=testnet) `(ok true)` · [grant](https://explorer.hiro.so/txid/0x085c254f86569275e8bfa0cac65152a84875dde97ea676d55cc801159a25fbf9?chain=testnet) `(ok true)` · [allocate](https://explorer.hiro.so/txid/0x1f5c17e483098fdbd11fe14f7f083b50d02febc1c5efdb81ba9e0faad63edbf4?chain=testnet) `(ok u10000)` · [unwind](https://explorer.hiro.so/txid/0xa7be818fc0711f31c6f372f1e7755e3506d8dcd0c4122f84b1c330d57fd815b6?chain=testnet) `(ok u10000)` · [withdraw](https://explorer.hiro.so/txid/0xbf277b197ad41ffc5816129ebc3c2463f7954d6baeba25b3b89d3599333f061a?chain=testnet) `(ok true)`; blocks 719,935 to 719,947; venue deployed in [block 719,933](https://explorer.hiro.so/txid/0x086d9b94b07098b68399dfabc75e5716329b8f81b7a8bbb5ef8e0de4a65497c4?chain=testnet); `npm run testnet:verify` (output below) | `655e5df` |
 | E-025 | 2026-10-14 | `npm audit` finds no vulnerabilities after a lockfile-only update of `source-map-js`, which vitest pulls in through vite and postcss, from 1.2.1 to 1.2.2, the first version GHSA-68fv-2mgg-jv7q lists as patched. The hostile-venue suite passes on the patched lockfile, and CI runs all three fork suites on it | `npm audit` and the advisory (output below); the pull request's CI run | `7655365` |
 | E-026 | 2026-10-14 | v4 enforces the per-vault AUM cap. Deposits up to the cap succeed across owners, and one sat over is refused with nothing moved (`u117`). A withdrawal frees room under it, and moving funds into a venue does not. An asset without a cap can't be deposited. Only the deployer sets a cap, once, never zero, and it can't be raised (`u118`, `u116`, `u119`). The 42 tests moved from v3 pass against v4 with caps set, and the full suite passes: 77 tests in 17 files | `npx vitest run tests/v4.test.ts` and `npx vitest run` (output below) | `0e29ba6` |
+| E-027 | 2026-10-14 | A contract an owner calls could act as the owner against v3, and can't against v4. Against v3, one call to a contract posing as an airdrop moved the owner's 400,000 idle tokens into the attacker's venue, which never pays them back. Against v4 the same call is refused (`u100`) with nothing moved, and a contract owner acting for itself from inside `as-contract?` still deposits and withdraws. The v4 suites pass with the change, 49 tests, and the hostile venue's callback is still refused (`u105`). The full suite passes: 80 tests in 18 files | `npx vitest run tests/phishing.test.ts` (output below) | `aa27bdf` |
 
 ### E-001 output
 ~~~text
@@ -467,4 +468,24 @@ $ npx vitest run
  Test Files  17 passed (17)
       Tests  77 passed (77)
 exit 0 in 431 s
+~~~
+
+### E-027 output
+~~~text
+$ npx vitest run tests/phishing.test.ts --silent=false --reporter=verbose
+  v3, alice claims airdrop : (ok u400000) | alice idle u0 | position u400000 | phish venue holds (ok u400000) | alice unwinds: (err u404)
+  v4, alice claims airdrop : (err u100) | alice idle u400000 | position u0 | phish venue holds (ok u0)
+  contract owner           : deposit (ok true) | idle u50000 | withdraw (ok true) | its tokens (ok u50000)
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+
+$ npx vitest run tests/v4.test.ts tests/v4-hostile.test.ts tests/v4-zest-fork.test.ts tests/phishing.test.ts
+  re-enters the vault      : (err u105) | u400000 | u0 | (ok u400000) | (ok u0)
+ Test Files  4 passed (4)
+      Tests  49 passed (49)
+
+$ npx vitest run
+ Test Files  18 passed (18)
+      Tests  80 passed (80)
+exit 0 in 355 s
 ~~~

@@ -114,3 +114,10 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Alternatives:** a cap written into the source, which would name each network's token and break one source per network; a cap on the vault's live holdings, which would value venue positions by the venues' own quotes; a cap the deployer can raise, which turns the limit back into a policy statement.
 **Consequences:** the deployer can enable a new asset by setting its cap, but can never raise one, so a higher cap means a new deployment after an external audit (D-008). The deployer is now a role, and the specification's trust assumptions say so.
 **Evidence:** E-026.
+
+## D-019 · The vault identifies callers by contract-caller · 2026-10-14 · accepted
+**Context:** v3 identifies owners and delegates by `tx-sender`, which passes through every contract an owner calls. A contract posing as an airdrop can, in the call an owner signs, allowlist its own venue, grant the owner a mandate and allocate the owner's idle funds into that venue. The vault's measurement checks pass, because the venue takes exactly the amount moved (E-027). v3 is on testnet only and holds nothing of value.
+**Decision:** v4 identifies the owner and the delegate by `contract-caller` in every function that acts on someone's books, so a contract an owner calls is itself the caller and acts only on its own books. `tx-sender` remains only inside the vault's own `as-contract?` bodies, where it is the vault, and in the deployer constant.
+**Alternatives:** keeping `tx-sender` and relying on wallet post-conditions, which can't stop the allowlist and grant calls since those move no assets, and which a malicious app can set to allow; requiring `tx-sender` and `contract-caller` to match, which would shut out owners that are contracts.
+**Consequences:** an owner or delegate that is a contract calls the vault from inside `as-contract?`. An intermediary can no longer act for an owner by passing on their `tx-sender`: anything acting for an owner needs a mandate in its own name.
+**Evidence:** E-027.

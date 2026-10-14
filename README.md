@@ -57,7 +57,9 @@ interaction if they disagree.
 Version 4, the version for mainnet, adds a per-vault cap on each asset: the
 vault's principal across all owners cannot exceed it. The deployer sets each cap
 once and can never raise it, so the maximum exposure is fixed and readable
-on-chain. On mainnet the sBTC cap is 0.01 BTC.
+on-chain. On mainnet the sBTC cap is 0.01 BTC. Version 4 also identifies owners
+and delegates by the principal that calls it directly, so a contract an owner
+interacts with cannot act in the owner's name.
 
 The full specification, including the order of every check, the error codes and
 the threat model, is in [docs/SPEC.md](docs/SPEC.md).
@@ -152,7 +154,7 @@ is required.
     npm ci
     npx vitest run
 
-The full suite comprises 77 tests in 17 files and completes in approximately 6 to 8
+The full suite comprises 80 tests in 18 files and completes in approximately 6 to 8
 minutes. It forks mainnet at block 9,194,000 (`initial_height` in `Clarinet.toml`),
 so results do not change as mainnet advances. Results are final only once the
 summary line has been printed.
@@ -238,7 +240,7 @@ To deploy an independent copy and run the same lifecycle:
       mandate-vault-v2.clar       Second version, retained with its tests
       mandate-probe-mainnet.clar  The minimal probe deployed on mainnet
       *probe.clar, venue-spike.clar   Exploratory contracts behind the venue findings
-    tests/                        77 tests in 17 files, plus the Jing and testnet fork tests
+    tests/                        80 tests in 18 files, plus the Jing and testnet fork tests
     scripts/                      Testnet deployment, execution and verification; the specification check
     deployments/                  Testnet deployment records
     docs/                         Specification, plan, decisions, evidence and verified dependency facts
