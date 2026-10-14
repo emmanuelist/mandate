@@ -248,6 +248,19 @@ describe("v4 positions", () => {
   });
 });
 
+describe("v4: reading a mandate", () => {
+  it("mandate-of: anyone can read the limits an owner granted, and none once revoked", () => {
+    setup();
+    grant(alice, agentX, { cap: 123_000 });
+    const m = simnet.callReadOnlyFn(V, "mandate-of", [Cl.principal(alice), Cl.principal(agentX)], mallory).result;
+    console.log("  mandate-of               :", pp(m));
+    expect(pp(m)).toContain("max-notional: u123000");
+    expect(pp(m)).toContain("window-len: u144");
+    simnet.callPublicFn(V, "revoke", [Cl.principal(agentX)], alice);
+    expect(pp(simnet.callReadOnlyFn(V, "mandate-of", [Cl.principal(alice), Cl.principal(agentX)], mallory).result)).toBe("none");
+  });
+});
+
 describe("v4: the per-vault AUM cap", () => {
   const capOf = () => ro("cap-of", [Cl.principal(MOCK)]);
   const aumOf = () => ro("aum-of", [Cl.principal(MOCK)]);

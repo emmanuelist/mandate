@@ -296,4 +296,5 @@ These show the vault working rather than refusing an attack.
 - "deposit, allocate, unwind, withdraw: every sat accounted for" (v4-zest-fork.test.ts)
 - "a zero-slippage mandate still allocates, because Zest fills at its quote" (v4-zest-fork.test.ts)
 - "Granite: deposit, allocate, unwind, withdraw: every unit accounted for" (v4-granite-fork.test.ts)
+- "mandate-of: anyone can read the limits an owner granted, and none once revoked" (v4.test.ts)
 - "testnet sBTC: deposit, allocate, unwind, withdraw, every sat accounted for" (sbtc-testnet.fork.ts)

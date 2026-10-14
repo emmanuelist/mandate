@@ -98,6 +98,10 @@
   (default-to { window-start: u0, window-count: u0, day-start: u0, day-notional: u0, cum-slip-bps: u0 }
     (map-get? counters { owner: owner, agent: agent })))
 
+;; the limits an owner granted a delegate, if any: what a delegate reads before acting
+(define-read-only (mandate-of (owner principal) (agent principal))
+  (map-get? mandates { owner: owner, agent: agent }))
+
 (define-read-only (aum-of (token principal))
   (default-to u0 (get amount (map-get? aum { token: token }))))
 
