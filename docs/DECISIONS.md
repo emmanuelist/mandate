@@ -87,3 +87,10 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Alternatives:** pointing v3 at a copy deployed on testnet, which gives each network a different source, so testnet wouldn't run the code the tests run.
 **Consequences:** one source runs in the tests, on testnet and, in M2, on mainnet, and `npm run testnet` refuses to run against a deployment whose source differs from the repo's. On a mainnet fork, sBTC still fits, Zest gives the same 99,937 shares in and 99,999 sats out, and the full suite passes.
 **Evidence:** E-017, E-011.
+
+## D-015 · A CI retry waits a minute · 2026-10-14 · supersedes D-013's back-to-back retries
+**Context:** D-013 retries a failed fork suite at once. On `main` after #21 the full suite passed, then the Jing suite's worker failed to start three times in 2.6 s. Three seconds before the first attempt, Hiro had told the runner to wait 29 and 53 s, so all three attempts fell inside that window. The pull request's run of the same code started the Jing suite after its last wait had run out, and passed (E-020).
+**Decision:** a failed attempt waits 60 s before the next. The longest wait Hiro has asked for in our logs is 57 s.
+**Alternatives:** running the Jing suite before the full suite's burst of requests, which avoids this case but not a worker failing mid-suite (#19); waiting before every suite, which costs a minute on every run rather than only after a failure.
+**Consequences:** a real failure takes two minutes longer to report, well inside the job's 45. That a worker can't start because its first fork requests are rate-limited is inferred from the timing, not traced inside the SDK.
+**Evidence:** E-020.

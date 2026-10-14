@@ -22,6 +22,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-017 | 2026-10-14 | The M1 contracts are deployed on Stacks testnet under `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5`, each with the repo's source and Clarity version: `mandate-vault-v3`, a mock sBTC (`mock-token`), a mock venue (`mock-venue`) and the two traits the vault uses | deploy transactions: [mandate-vault-v3](https://explorer.hiro.so/txid/0x26400b07e407980984c89c9da2cf61ff469202e4c14eb97af4241e3a91700ce6?chain=testnet) · [mock-token](https://explorer.hiro.so/txid/0xa9ff4fbe791268326039434dfa0222333bf3a8717efcef0ab76db5dd463c2a6e?chain=testnet) · [mock-venue](https://explorer.hiro.so/txid/0xc9de22d0954b5f53fa05c5ca1ea8451b258bd4790aad4e8929b32200ef0f6439?chain=testnet) · [sip-010-trait](https://explorer.hiro.so/txid/0x166a1bab5b3105827474def3ee7db1635006818573490b89f7ef8781538f23ee?chain=testnet) · [venue-trait](https://explorer.hiro.so/txid/0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b?chain=testnet), blocks 719,259 to 719,267; `npm run testnet:verify` (output below) | `f00508b` |
 | E-018 | 2026-10-14 | One mandate end to end on testnet, one transaction per step: the owner deposits 400,000 mock sBTC and grants a delegate, the delegate allocates 100,000 into the mock venue and unwinds it, and the owner withdraws all 400,000. Afterwards the owner's vault balance and position and the vault's tokens are zero, and the owner's wallet holds all 1,000,000 minted | [deposit](https://explorer.hiro.so/txid/0xcc2bd1d810ff14b4e062d73d28ea797ed2b6582c7cf3dfaa287fa66f5aa60e99?chain=testnet) `(ok true)` · [grant](https://explorer.hiro.so/txid/0x37d9f9c90177209edecb94bc08fc62a2b0436f2d0d97a223b24eb23ffc80d5ad?chain=testnet) `(ok true)` · [allocate](https://explorer.hiro.so/txid/0x5ec913434edac52e3931ffeff81d1dac5ce7d85d60deb35380dcbb223ffa7363?chain=testnet) `(ok u100000)` · [unwind](https://explorer.hiro.so/txid/0xeb6f3bb4678fd50f4616e14d15cf49391b86fd18499c38a2fdd97cd615930b68?chain=testnet) `(ok u100000)` · [withdraw](https://explorer.hiro.so/txid/0xfe071e940bcd51510c8cf451b99ec2a46b8e9752cdcba546076843a1e14c1974?chain=testnet) `(ok true)`; blocks 719,271 to 719,287. All nine steps, with the reads after, are in `deployments/testnet-run.json` at `7f65fef`, re-read from the chain in E-017's output | `7f65fef` |
 | E-019 | 2026-10-14 | Rebuilding is one command. On the deployed contracts, `npm run testnet` finds all five identical to the repo and sends no deploys, then repeats the lifecycle, and the books reconcile against reads taken before the run; the script fails if they don't. With a contract edited locally, the deploy step stops before sending anything and `npm run testnet:verify` fails. A fresh run costs account 1 8.11 STX: 2.5 in deploy fees, 0.61 in call fees, and 5 sent to the delegate | [deposit](https://explorer.hiro.so/txid/0x1b7330937d2c0d4dfec50d2023302223b9e6fc6b86dbb345ffbab22bf7852d0f?chain=testnet) `(ok true)` · [grant](https://explorer.hiro.so/txid/0xfb677877d675498fe0dfccd0f95f654aa576c9c81bb34b64eece2f315ae8c673?chain=testnet) `(ok true)` · [allocate](https://explorer.hiro.so/txid/0x73924838982ced49643ec0e3710b712b624fb140ed7e5e33e734a9eeb431e03f?chain=testnet) `(ok u100000)` · [unwind](https://explorer.hiro.so/txid/0x43bad4af1df7ee5f48df87a9cf9b7a8f89a2981ef99f97b53248d1c5e536f2ab?chain=testnet) `(ok u100000)` · [withdraw](https://explorer.hiro.so/txid/0x1f978cfe8c63bd739e09495ca52f93b412bed98d60998ace774fa2e795cf7af5?chain=testnet) `(ok true)`; blocks 719,366 to 719,385; output below | `0706d6d` |
+| E-020 | 2026-10-14 | Back-to-back retries fail together inside a rate-limit window. On `main` after #21, the Jing suite's worker failed to start three times between 00:40:03.8 and 00:40:06.4 UTC, three seconds after Hiro had told the runner to wait 29 and 53 s. The pull request's run of the same code started the suite after its last wait had run out, and passed. Rerun, the failed job passed: the Jing suite started inside a window again, and this time the SDK waited out its one rate limit. The new loop waits 60 s between attempts and still exits at once on a pass | [run 38491027038](https://github.com/emmanuelist/mandate/actions/runs/38491027038), attempts 1 and 2; [run 38490379351](https://github.com/emmanuelist/mandate/actions/runs/38490379351); the loop run locally (output below) | `fb2d0d4`, `e60ffca` |
 
 ### E-001 output
 ~~~text
@@ -275,4 +276,33 @@ $ node scripts/testnet-deploy.mjs
   venue-trait       already deployed, identical to the repo   0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b
   mock-token        already deployed, identical to the repo   0xa9ff4fbe791268326039434dfa0222333bf3a8717efcef0ab76db5dd463c2a6e
 Error: ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue was deployed from a different contracts/mock-venue.clar: deploy from a fresh testnet account
+~~~
+
+### E-020 output
+~~~text
+# run 38491027038, attempt 1: main at fb2d0d4 (UTC)
+00:40:00.2  full suite  Rate limited, retrying after 53 seconds...
+00:40:00.9  full suite  Rate limited, retrying after 29 seconds...
+00:40:03.8  full suite  Tests  73 passed (73)
+00:40:04.7  Jing suite  Error: [vitest-pool]: Failed to start forks worker for test files /home/runner/work/mandate/mandate/tests/jing-fork.fork.ts.
+00:40:04.7  Jing suite  attempt 1 failed
+00:40:05.6  Jing suite  attempt 2 failed, the same error
+00:40:06.4  Jing suite  attempt 3 failed, the same error
+waits Hiro asked for in this attempt (s): 1 1 25 26 29 53 55 56 56 56 57 57
+
+# run 38490379351: the pull request, the same code
+00:33:06.1  full suite  Rate limited, retrying after 54 seconds...   (its last)
+00:34:09.7  full suite  Tests  73 passed (73)
+00:34:18.0  Jing suite  Tests  1 passed (1)
+
+# run 38491027038, attempt 2: the failed job rerun
+00:49:02.6  full suite  Rate limited, retrying after 54 seconds...
+00:49:17.4  full suite  Tests  73 passed (73)
+00:49:20.3  Jing suite  Rate limited, retrying after 40 seconds...
+00:50:13.5  Jing suite  Tests  1 passed (1)
+
+# the new retry loop at e60ffca, run locally under bash -e with stand-ins for npx and sleep:
+passes on attempt 1: exit 0, 1 attempt, no wait
+passes on attempt 2: exit 0, 2 attempts, one 60 s wait
+never passes:        exit 1, 3 attempts, two 60 s waits
 ~~~
