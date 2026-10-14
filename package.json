@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "test": "vitest run",
     "testnet": "node scripts/testnet-deploy.mjs && node scripts/testnet-e2e.mjs",
