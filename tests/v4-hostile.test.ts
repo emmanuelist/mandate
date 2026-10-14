@@ -1,13 +1,13 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
 
-// v3 against contracts/hostile-venue.clar, a venue that misbehaves on purpose.
+// v4 against contracts/hostile-venue.clar, a venue that misbehaves on purpose.
 // Each attack must be refused with nothing moved: idle balances, positions and
 // the vault's real token balance all unchanged.
 const a = simnet.getAccounts();
 const dep = simnet.deployer;
 const alice = a.get("wallet_1")!, bob = a.get("wallet_2")!, agentX = a.get("wallet_3")!;
-const V = "mandate-vault-v3";
+const V = "mandate-vault-v4";
 const MOCK = `${dep}.mock-token`;
 const HOSTILE = `${dep}.hostile-venue`;
 const VAULT = `${dep}.${V}`;
@@ -22,6 +22,7 @@ const vaultShares = () => pp(simnet.callReadOnlyFn("hostile-venue", "get-balance
 const mode = (m: number) => simnet.callPublicFn("hostile-venue", "set-mode", [Cl.uint(m)], dep);
 
 function owner(who: string) {
+  simnet.callPublicFn(V, "set-cap", [Cl.principal(MOCK), Cl.uint(10_000_000)], dep); // refused after the first, harmlessly
   simnet.callPublicFn("mock-token", "mint", [Cl.uint(1_000_000), Cl.principal(who)], dep);
   simnet.callPublicFn(V, "allow-asset", [Cl.principal(MOCK)], who);
   simnet.callPublicFn(V, "allow-venue", [Cl.principal(HOSTILE), Cl.principal(MOCK)], who);
@@ -37,7 +38,7 @@ const ownerUnwind = (who: string, n: number) =>
   simnet.callPublicFn(V, "owner-unwind", [hostile(), mock(), Cl.uint(n), Cl.uint(1)], who);
 const snap = () => [idle(alice), pos(alice), vaultTokens(), vaultShares()].join(" | ");
 
-describe("v3 against a hostile venue: measure, don't trust", () => {
+describe("v4 against a hostile venue: measure, don't trust", () => {
   it("control: the same venue behaving honestly passes every check", () => {
     owner(alice); mode(0);
     expect(allocate(alice, 10_000).result).toBeOk(Cl.uint(10_000));

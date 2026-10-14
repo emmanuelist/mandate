@@ -54,7 +54,7 @@ jobs:
           exit $fail
 
   spec:
-    name: spec names every v3 test
+    name: spec names every vault test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

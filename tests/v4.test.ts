@@ -1,7 +1,7 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
 
-// v3 against a deterministic venue (contracts/mock-venue.clar). The real-Zest
+// v4 against a deterministic venue (contracts/mock-venue.clar). The real-Zest
 // path is the fork test for #5; the call pattern itself is proven in
 // tests/venue-spike.test.ts.
 const a = simnet.getAccounts();
@@ -9,10 +9,11 @@ const dep = simnet.deployer;
 const alice = a.get("wallet_1")!, bob = a.get("wallet_2")!;
 const agentX = a.get("wallet_3")!;
 const mallory = bob; // the stranger, wallet_2 as in the v2 tests; no test needs both
-const V = "mandate-vault-v3";
+const V = "mandate-vault-v4";
 const MOCK = `${dep}.mock-token`;
 const VENUE = `${dep}.mock-venue`;
 const VAULT = `${dep}.${V}`;
+const CAP = 10_000_000; // the tests' cap on the vault's mock-token principal
 
 const mock = () => Cl.contractPrincipal(dep, "mock-token");
 const venue = () => Cl.contractPrincipal(dep, "mock-venue");
@@ -28,6 +29,7 @@ const vaultShares = () =>
   pp(simnet.callReadOnlyFn("mock-venue", "get-balance", [Cl.principal(VAULT)], dep).result);
 
 function setup(owner = alice, amount = 400_000) {
+  simnet.callPublicFn(V, "set-cap", [Cl.principal(MOCK), Cl.uint(CAP)], dep); // refused after the first, harmlessly
   simnet.callPublicFn("mock-token", "mint", [Cl.uint(1_000_000), Cl.principal(owner)], dep);
   simnet.callPublicFn(V, "allow-asset", [Cl.principal(MOCK)], owner);
   simnet.callPublicFn(V, "allow-venue", [Cl.principal(VENUE), Cl.principal(MOCK)], owner);
@@ -50,7 +52,7 @@ const unwind = (owner: string, shares: number, by = agentX) =>
 const ownerUnwind = (owner: string, shares: number, minOut = 1) =>
   simnet.callPublicFn(V, "owner-unwind", [venue(), mock(), Cl.uint(shares), Cl.uint(minOut)], owner);
 
-describe("v3: the delegate allocates through a venue", () => {
+describe("v4: the delegate allocates through a venue", () => {
   it("allocates idle assets into the venue, unwinds them, and the owner withdraws everything", () => {
     setup();
     grant(alice, agentX);
@@ -80,7 +82,7 @@ describe("v3: the delegate allocates through a venue", () => {
   });
 });
 
-describe("v3 policy: every v2 limit applies to allocate", () => {
+describe("v4 policy: every v2 limit applies to allocate", () => {
   it("refuses a caller with no mandate", () => {
     setup();
     expect(allocate(alice, 1_000).result).toBeErr(Cl.uint(100));      // ERR_NO_MANDATE
@@ -125,7 +127,7 @@ describe("v3 policy: every v2 limit applies to allocate", () => {
   });
 });
 
-describe("v3 slippage: the floor comes from the venue's quote, not the delegate", () => {
+describe("v4 slippage: the floor comes from the venue's quote, not the delegate", () => {
   it("refuses a fill worse than the mandate's slippage, and nothing moves", () => {
     setup(); grant(alice, agentX, { slip: 100 });
     simnet.callPublicFn("mock-venue", "set-haircut", [Cl.uint(200)], dep);   // 2% worse than quoted
@@ -145,7 +147,7 @@ describe("v3 slippage: the floor comes from the venue's quote, not the delegate"
   });
 });
 
-describe("v3 keeps v2's fixes, ported to the new entry points", () => {
+describe("v4 keeps v2's fixes, ported to the new entry points", () => {
   it("revoking can't strand funds: the owner unwinds and withdraws without a mandate", () => {
     setup(); grant(alice, agentX);
     allocate(alice, 100_000);
@@ -189,7 +191,7 @@ describe("v3 keeps v2's fixes, ported to the new entry points", () => {
   });
 });
 
-describe("v3 grant parameters", () => {
+describe("v4 grant parameters", () => {
   const raw = (win: number, slip: number, cum: number) =>
     simnet.callPublicFn(V, "grant", [Cl.principal(agentX), Cl.uint(500_000), Cl.uint(9_999_999),
       Cl.uint(slip), Cl.uint(100), Cl.uint(win), Cl.uint(10_000_000), Cl.uint(cum)], alice);
@@ -213,7 +215,7 @@ describe("v3 grant parameters", () => {
   });
 });
 
-describe("v3 positions", () => {
+describe("v4 positions", () => {
   it("a position keeps the asset it was opened with", () => {
     setup(); grant(alice, agentX);
     allocate(alice, 10_000);
@@ -243,5 +245,74 @@ describe("v3 positions", () => {
     setup(); grant(alice, agentX);
     allocate(alice, 10_000);
     expect(ownerUnwind(bob, 10_000).result).toBeErr(Cl.uint(113));
+  });
+});
+
+describe("v4: the per-vault AUM cap", () => {
+  const capOf = () => ro("cap-of", [Cl.principal(MOCK)]);
+  const aumOf = () => ro("aum-of", [Cl.principal(MOCK)]);
+  const ready = (who: string) => {
+    simnet.callPublicFn("mock-token", "mint", [Cl.uint(1_000_000), Cl.principal(who)], dep);
+    simnet.callPublicFn(V, "allow-asset", [Cl.principal(MOCK)], who);
+  };
+  const deposit = (who: string, n: number) => simnet.callPublicFn(V, "deposit", [mock(), Cl.uint(n)], who);
+  const setCap = (cap: number, by = dep, token = MOCK) =>
+    simnet.callPublicFn(V, "set-cap", [Cl.principal(token), Cl.uint(cap)], by);
+
+  it("the cap: deposits up to it succeed across owners, and one sat over is refused with nothing moved", () => {
+    expect(setCap(1_000_000).result).toBeOk(Cl.bool(true));
+    ready(alice); ready(bob);
+    expect(deposit(alice, 600_000).result).toBeOk(Cl.bool(true));
+    expect(deposit(bob, 400_000).result).toBeOk(Cl.bool(true));
+    const over = deposit(bob, 1);
+    console.log("  at the cap, 1 sat more   :", pp(over.result), "| principal", aumOf(), "of cap", capOf(), "| vault", tokenOf(VAULT));
+    expect(over.result).toBeErr(Cl.uint(117));
+    expect(aumOf()).toBe("u1000000");
+    expect(tokenOf(VAULT)).toBe("(ok u1000000)");
+    expect(tokenOf(bob)).toBe("(ok u600000)");
+    expect(bal(bob)).toBe("u400000");
+  });
+
+  it("the cap: a withdrawal frees room under it, and moving funds into a venue does not", () => {
+    expect(setCap(1_000_000).result).toBeOk(Cl.bool(true));
+    ready(alice);
+    simnet.callPublicFn(V, "allow-venue", [Cl.principal(VENUE), Cl.principal(MOCK)], alice);
+    expect(deposit(alice, 1_000_000).result).toBeOk(Cl.bool(true));
+    grant(alice, agentX);
+    expect(allocate(alice, 500_000).result).toBeOk(Cl.uint(500_000));
+    expect(aumOf()).toBe("u1000000");                         // funds in a venue are still under management
+    expect(deposit(alice, 1).result).toBeErr(Cl.uint(117));
+    expect(unwind(alice, 500_000).result).toBeOk(Cl.uint(500_000));
+    expect(aumOf()).toBe("u1000000");
+    expect(simnet.callPublicFn(V, "withdraw", [mock(), Cl.uint(300_000)], alice).result).toBeOk(Cl.bool(true));
+    console.log("  after withdrawing 300000 :", "principal", aumOf(), "of cap", capOf());
+    expect(aumOf()).toBe("u700000");
+    expect(deposit(alice, 300_000).result).toBeOk(Cl.bool(true));
+    expect(aumOf()).toBe("u1000000");
+  });
+
+  it("the cap: an asset without a cap can't be deposited", () => {
+    ready(alice);
+    const r = deposit(alice, 1);
+    console.log("  no cap set, deposit 1    :", pp(r.result), "| cap", capOf(), "| vault", tokenOf(VAULT));
+    expect(r.result).toBeErr(Cl.uint(117));
+    expect(tokenOf(VAULT)).toBe("(ok u0)");
+    expect(tokenOf(alice)).toBe("(ok u1000000)");
+  });
+
+  it("the cap: only the deployer sets it, once, and it can be neither zero nor raised", () => {
+    const stranger = setCap(1_000_000, mallory);
+    const zero = setCap(0);
+    const first = setCap(1_000_000);
+    const raise = setCap(2_000_000);
+    const other = setCap(5_000, dep, "SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token");
+    console.log("  stranger, zero, set, raise, other asset:", pp(stranger.result), pp(zero.result), pp(first.result),
+      pp(raise.result), pp(other.result), "| cap", capOf());
+    expect(stranger.result).toBeErr(Cl.uint(118));
+    expect(zero.result).toBeErr(Cl.uint(116));
+    expect(first.result).toBeOk(Cl.bool(true));
+    expect(raise.result).toBeErr(Cl.uint(119));
+    expect(other.result).toBeOk(Cl.bool(true));               // each asset has its own cap
+    expect(capOf()).toBe("u1000000");
   });
 });

@@ -20,7 +20,7 @@
     (asserts! (>= amount min-out) ERR_MIN_OUT)
     (try! (contract-call? .mock-token transfer (if (is-eq m u1) (+ amount u1) amount) payer me none))
     (if (is-eq m u4)
-        (try! (contract-call? .mandate-vault-v3 withdraw .mock-token u1))
+        (try! (contract-call? .mandate-vault-v4 withdraw .mock-token u1))
         true)
     (try! (ft-mint? hshare (if (is-eq m u2) (/ amount u2) amount) recipient))
     (ok amount)))

@@ -1,7 +1,7 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
 
-// mandate-vault-v3 against Zest's real v0-vault-sbtc on a mainnet fork, with
+// mandate-vault-v4 against Zest's real v0-vault-sbtc on a mainnet fork, with
 // no adapter: the vault is Zest's contract-caller (D-009).
 const SBTC_ADDR = "SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4";
 const ZEST_ADDR = "SP1A27KFY4XERQCCRCARCYD1CC5N7M6688BSYADJ7";
@@ -11,7 +11,7 @@ const ZEST = `${ZEST_ADDR}.v0-vault-sbtc`;
 
 const dep = simnet.deployer;
 const agentX = simnet.getAccounts().get("wallet_3")!;
-const V = "mandate-vault-v3";
+const V = "mandate-vault-v4";
 const VAULT = `${dep}.${V}`;
 const AMT = 100_000;
 
@@ -25,6 +25,7 @@ const idle = () => num(pp(simnet.callReadOnlyFn(V, "balance-of", [Cl.principal(O
 const position = () => num(pp(simnet.callReadOnlyFn(V, "shares-of", [Cl.principal(OWNER), Cl.principal(ZEST)], dep).result));
 
 function setup(opts: Partial<{ cap: number; expires: number; slip: number; trades: number; daily: number }> = {}) {
+  simnet.callPublicFn(V, "set-cap", [Cl.principal(SBTC), Cl.uint(1_000_000)], dep); // 0.01 BTC, the mainnet cap (D-018)
   simnet.callPublicFn(V, "allow-asset", [Cl.principal(SBTC)], OWNER);
   simnet.callPublicFn(V, "allow-venue", [Cl.principal(ZEST), Cl.principal(SBTC)], OWNER);
   const d = simnet.callPublicFn(V, "deposit", [sbtc(), Cl.uint(AMT)], OWNER);
@@ -42,7 +43,7 @@ const unwind = (shares: number) =>
 const ownerUnwind = (shares: number) =>
   simnet.callPublicFn(V, "owner-unwind", [zest(), sbtc(), Cl.uint(shares), Cl.uint(1)], OWNER);
 
-describe("v3 against Zest's v0-vault-sbtc on a mainnet fork, with no adapter", () => {
+describe("v4 against Zest's v0-vault-sbtc on a mainnet fork, with no adapter", () => {
   it("deposit, allocate, unwind, withdraw: every sat accounted for", () => {
     const walletStart = sbtcOf(OWNER);
     setup();
