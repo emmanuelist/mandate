@@ -193,8 +193,9 @@ To deploy an independent copy and run the same lifecycle:
    and acts as the owner, and its second account acts as the delegate.
 2. Run `npm run testnet:accounts` to display both addresses and their balances,
    then fund the first account with at least 7.51 testnet STX and 20,000 sats of
-   testnet sBTC from a faucet (see
-   [testnet faucets](https://docs.stacks.co/learn/network-fundamentals/mainnet-and-testnets)).
+   testnet sBTC. The [Hiro Platform faucet](https://platform.hiro.so/faucet)
+   provides both; it sends testnet sBTC 10,000 sats at a time, so two requests
+   cover the run.
 3. Run `npm run testnet`. The script deploys the four contracts listed in
    `Clarinet-testnet.toml`, executes one mandate end to end with testnet sBTC,
    confirms that the balances reconcile and writes the records to `deployments/`.

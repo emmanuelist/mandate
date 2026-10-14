@@ -62,7 +62,7 @@ const fmt = (n) => n.toLocaleString("en-US");
 console.log(`owner ${D}\ndelegate ${delegate.address}`);
 const held = await sbtcBalance(D);
 if (held < DEPOSIT) {
-  throw new Error(`account 1 holds ${held} sats of testnet sBTC and the run needs ${DEPOSIT}: request testnet sBTC from a faucet (see the README)`);
+  throw new Error(`account 1 holds ${held} sats of testnet sBTC and the run needs ${DEPOSIT}: request testnet sBTC from the Hiro Platform faucet (see the README)`);
 }
 const before = await books();
 const delegateStx = BigInt((await fetch(`${API}/extended/v1/address/${delegate.address}/stx`).then((r) => r.json())).balance);
