@@ -287,6 +287,19 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 | withdrawing outright | "withdrawing: the delegate pulls the vault's tokens through the token contract" | the token's own `u4` |
 | withdrawing outright | "withdrawing: the delegate withdraws what it just unwound" | `u105` |
 
+## Invariants
+
+`tests/v4-invariants.test.ts` drives two owners and two delegates through 400 random steps per seed: deposits and withdrawals of two tokens, grants with random limits, revokes, allocations and unwinds (many refused), owner unwinds, venue haircuts, Bitcoin blocks passing, and full exits. After every step it checks that
+
+1. the vault's balance of each token equals the sum of the owners' idle balances. Only a direct transfer to the vault, which no step makes, could raise the balance above the books;
+2. the vault's shares in the venue equal the sum of the owners' positions;
+3. no delegate's token balance ever grows.
+
+At random points, and for every owner at the end, an owner exits completely, unwinding every position and withdrawing every idle balance; each exit succeeds, and at the end the vault holds no tokens and no shares. A walk that reaches fewer than 15 successful allocations, or fewer than 15 unwinds and exits, fails, so a run can't pass by exercising nothing. One seed is fixed for CI; another is random and printed, and `INVARIANT_SEED` replays it. A token sent to the vault mid-walk, which the books don't record, fails the check at that step (E-033).
+
+- "invariants: 400 random steps across two owners and two delegates, fixed seed" (v4-invariants.test.ts)
+- "invariants: 400 random steps, from a random seed printed for replay" (v4-invariants.test.ts)
+
 ## Lifecycle tests
 
 These show the vault working rather than refusing an attack.
