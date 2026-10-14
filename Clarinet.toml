@@ -123,6 +123,11 @@ path = "contracts/venue-spike.clar"
 epoch = "latest"
 clarity_version = 4
 
+[contracts.mock-token-b]
+path = "contracts/mock-token-b.clar"
+epoch = "latest"
+clarity_version = 3
+
 [contracts.mock-venue]
 path = "contracts/mock-venue.clar"
 epoch = "latest"

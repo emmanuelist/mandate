@@ -77,6 +77,16 @@ jobs:
       # Under Hiro's rate limit the SDK sometimes fails a worker or a read. The forks are pinned, so a real failure fails
       # every attempt and an infrastructure one doesn't (D-013). A retry waits 60 s, longer than any wait Hiro has asked
       # for, so it doesn't land in the same rate-limit window as the attempt it retries (D-015).
+      # The suites that touch only local contracts run on Clarinet-local.toml, with no
+      # fork, in seconds (#45). Every manifest regenerates the one simnet plan file, so a
+      # worker can fail to start while it's rewritten; a retry finds it in place.
+      - name: local suites (no fork), up to three attempts
+        run: |
+          for i in 1 2 3; do
+            npx vitest run --config vitest.local.config.ts && exit 0
+            echo "::warning::local suites attempt $i failed"
+          done
+          exit 1
       - name: full suite (fork pinned at block 9194000), up to three attempts
         run: |
           for i in 1 2 3; do

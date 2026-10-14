@@ -1,0 +1,69 @@
+# Manifest without a fork, for the suites that touch only local contracts (#45):
+# they run in seconds and send nothing to Hiro's API.
+# Run: npx vitest run --config vitest.local.config.ts
+[project]
+name = "mandate-local"
+description = "The vault's local suites, with no mainnet fork"
+authors = []
+telemetry = false
+cache_dir = "./.cache"
+
+[contracts.sip-010-trait]
+path = "contracts/sip-010-trait.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.venue-trait]
+path = "contracts/venue-trait.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.mock-token]
+path = "contracts/mock-token.clar"
+epoch = "latest"
+clarity_version = 3
+
+[contracts.mock-token-b]
+path = "contracts/mock-token-b.clar"
+epoch = "latest"
+clarity_version = 3
+
+[contracts.mock-venue]
+path = "contracts/mock-venue.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.hostile-venue]
+path = "contracts/hostile-venue.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.phish-venue]
+path = "contracts/phish-venue.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.phisher-v3]
+path = "contracts/phisher-v3.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.phisher-v4]
+path = "contracts/phisher-v4.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.self-owner]
+path = "contracts/self-owner.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.mandate-vault-v3]
+path = "contracts/mandate-vault-v3.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.mandate-vault-v4]
+path = "contracts/mandate-vault-v4.clar"
+epoch = "latest"
+clarity_version = 4

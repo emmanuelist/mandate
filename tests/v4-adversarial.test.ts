@@ -14,11 +14,11 @@ const MOCK = `${dep}.mock-token`;
 const VENUE = `${dep}.mock-venue`;
 const HOSTILE = `${dep}.hostile-venue`;
 const PHISH = `${dep}.phish-venue`;
-const SBTC = "SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token";
+const OTHER = `${dep}.mock-token-b`; // an asset nobody allowlisted
 
 const pp = (r: any) => Cl.prettyPrint(r);
 const mock = () => Cl.contractPrincipal(dep, "mock-token");
-const sbtc = () => Cl.contractPrincipal("SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4", "sbtc-token");
+const other = () => Cl.contractPrincipal(dep, "mock-token-b");
 const venue = (name = "mock-venue") => Cl.contractPrincipal(dep, name);
 const ro = (fn: string, args: any[]) => pp(simnet.callReadOnlyFn(V, fn, args, dep).result);
 const tokenOf = (who: string) => pp(simnet.callReadOnlyFn("mock-token", "get-balance", [Cl.principal(who)], dep).result);
@@ -98,27 +98,27 @@ describe("adversarial: oversized orders", () => {
 
 describe("adversarial: unlisted assets", () => {
   it("unlisted asset: an asset the owner never allowlisted", () => {
-    world(); refused(106, () => allocate(alice, 10_000, agentX, venue(), sbtc()));
+    world(); refused(106, () => allocate(alice, 10_000, agentX, venue(), other()));
   });
   it("unlisted asset: an asset the owner disallowed after granting", () => {
     world(); call("disallow-asset", [Cl.principal(MOCK)], alice);
     refused(106, () => allocate(alice, 10_000));
   });
   it("unlisted asset: an asset only another owner allowlisted", () => {
-    world(); call("allow-asset", [Cl.principal(SBTC)], bob);
-    refused(106, () => allocate(alice, 10_000, agentX, venue(), sbtc()));
+    world(); call("allow-asset", [Cl.principal(OTHER)], bob);
+    refused(106, () => allocate(alice, 10_000, agentX, venue(), other()));
   });
   it("unlisted asset: an asset the delegate allowlisted for itself", () => {
-    world(); call("allow-asset", [Cl.principal(SBTC)], agentX);
-    refused(106, () => allocate(alice, 10_000, agentX, venue(), sbtc()));
+    world(); call("allow-asset", [Cl.principal(OTHER)], agentX);
+    refused(106, () => allocate(alice, 10_000, agentX, venue(), other()));
   });
   it("unlisted asset: a listed venue paired with an asset it wasn't listed for", () => {
-    world(); call("allow-asset", [Cl.principal(SBTC)], alice);
-    refused(107, () => allocate(alice, 10_000, agentX, venue(), sbtc()));
+    world(); call("allow-asset", [Cl.principal(OTHER)], alice);
+    refused(107, () => allocate(alice, 10_000, agentX, venue(), other()));
   });
   it("unlisted asset: unwinding into an asset other than the position's", () => {
     world(); allocate(alice, 50_000);
-    refused(106, () => unwind(alice, 50_000, agentX, venue(), sbtc()));
+    refused(106, () => unwind(alice, 50_000, agentX, venue(), other()));
   });
 });
 

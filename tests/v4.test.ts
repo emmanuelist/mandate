@@ -17,7 +17,7 @@ const CAP = 10_000_000; // the tests' cap on the vault's mock-token principal
 
 const mock = () => Cl.contractPrincipal(dep, "mock-token");
 const venue = () => Cl.contractPrincipal(dep, "mock-venue");
-const sbtc = () => Cl.contractPrincipal("SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4", "sbtc-token");
+const other = () => Cl.contractPrincipal(dep, "mock-token-b"); // an asset nobody allowlisted
 
 const pp = (r: any) => Cl.prettyPrint(r);
 const ro = (fn: string, args: any[]) => pp(simnet.callReadOnlyFn(V, fn, args, dep).result);
@@ -97,7 +97,7 @@ describe("v4 policy: every v2 limit applies to allocate", () => {
   });
   it("refuses an asset the owner hasn't allowlisted", () => {
     setup(); grant(alice, agentX);
-    expect(allocate(alice, 1_000, agentX, sbtc()).result).toBeErr(Cl.uint(106));  // ERR_ASSET
+    expect(allocate(alice, 1_000, agentX, other()).result).toBeErr(Cl.uint(106));  // ERR_ASSET
   });
   it("refuses a venue the owner hasn't allowlisted", () => {
     setup(); grant(alice, agentX);
@@ -106,7 +106,7 @@ describe("v4 policy: every v2 limit applies to allocate", () => {
   });
   it("refuses a venue allowlisted for a different asset", () => {
     setup(); grant(alice, agentX);
-    simnet.callPublicFn(V, "allow-venue", [Cl.principal(VENUE), Cl.principal("SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token")], alice);
+    simnet.callPublicFn(V, "allow-venue", [Cl.principal(VENUE), Cl.principal(`${dep}.mock-token-b`)], alice);
     expect(allocate(alice, 1_000).result).toBeErr(Cl.uint(107));      // ERR_VENUE
   });
   it("refuses when the rate window is exhausted", () => {
@@ -219,9 +219,9 @@ describe("v4 positions", () => {
   it("a position keeps the asset it was opened with", () => {
     setup(); grant(alice, agentX);
     allocate(alice, 10_000);
-    simnet.callPublicFn(V, "allow-asset", [Cl.principal("SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token")], alice);
-    simnet.callPublicFn(V, "allow-venue", [Cl.principal(VENUE), Cl.principal("SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token")], alice);
-    expect(allocate(alice, 1_000, agentX, sbtc()).result).toBeErr(Cl.uint(107));
+    simnet.callPublicFn(V, "allow-asset", [Cl.principal(`${dep}.mock-token-b`)], alice);
+    simnet.callPublicFn(V, "allow-venue", [Cl.principal(VENUE), Cl.principal(`${dep}.mock-token-b`)], alice);
+    expect(allocate(alice, 1_000, agentX, other()).result).toBeErr(Cl.uint(107));
   });
   it("disallowing a venue stops new allocations but not unwinding", () => {
     setup(); grant(alice, agentX);
@@ -238,7 +238,7 @@ describe("v4 positions", () => {
   it("unwinding with an asset other than the position's is refused", () => {
     setup(); grant(alice, agentX);
     allocate(alice, 10_000);
-    const r = simnet.callPublicFn(V, "unwind", [Cl.principal(alice), venue(), sbtc(), Cl.uint(10_000)], agentX);
+    const r = simnet.callPublicFn(V, "unwind", [Cl.principal(alice), venue(), other(), Cl.uint(10_000)], agentX);
     expect(r.result).toBeErr(Cl.uint(106));                            // ERR_ASSET
   });
   it("the owner can't unwind another owner's position", () => {
@@ -318,7 +318,7 @@ describe("v4: the per-vault AUM cap", () => {
     const zero = setCap(0);
     const first = setCap(1_000_000);
     const raise = setCap(2_000_000);
-    const other = setCap(5_000, dep, "SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token");
+    const other = setCap(5_000, dep, `${dep}.mock-token-b`);
     console.log("  stranger, zero, set, raise, other asset:", pp(stranger.result), pp(zero.result), pp(first.result),
       pp(raise.result), pp(other.result), "| cap", capOf());
     expect(stranger.result).toBeErr(Cl.uint(118));
