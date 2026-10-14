@@ -295,7 +295,7 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 2. the vault's shares in the venue equal the sum of the owners' positions;
 3. no delegate's token balance ever grows.
 
-At random points, and for every owner at the end, an owner exits completely, unwinding every position and withdrawing every idle balance; each exit succeeds, and at the end the vault holds no tokens and no shares. A walk that reaches fewer than 15 successful allocations, or fewer than 15 unwinds and exits, fails, so a run can't pass by exercising nothing. One seed is fixed for CI; another is random and printed, and `INVARIANT_SEED` replays it. A token sent to the vault mid-walk, which the books don't record, fails the check at that step (E-033).
+At random points, and for every owner at the end, an owner exits completely, unwinding every position and withdrawing every idle balance; each exit succeeds, and at the end the vault holds no tokens and no shares. So a run can't pass by exercising nothing, the fixed seed must reach 15 successful allocations and 15 unwinds and exits, and a random seed 5 and 15: over 61 random seeds, allocations ranged from 12 to 49 and unwinds and exits never fell below 31. One seed is fixed for CI; another is random and printed, and `INVARIANT_SEED` replays it. A token sent to the vault mid-walk, which the books don't record, fails the check at that step (E-033).
 
 - "invariants: 400 random steps across two owners and two delegates, fixed seed" (v4-invariants.test.ts)
 - "invariants: 400 random steps, from a random seed printed for replay" (v4-invariants.test.ts)

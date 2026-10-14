@@ -120,21 +120,25 @@ function walk(seed: number, steps: number) {
 
 const summary = (c: Record<string, number>) => Object.entries(c).sort().map(([k, v]) => `${k} ${v}`).join(", ");
 
+// A walk takes about 2 s locally and up to 10 s on CI's runners. Over 61 random
+// seeds, successful allocations ranged from 12 to 49 and unwinds and exits never
+// fell below 31: the fixed seed must reach 15 of each, a random seed 5 and 15.
+const TIMEOUT = 60_000;
 describe("v4 invariants over random sequences", () => {
-  const exercised = (c: Record<string, number>) => {
-    expect(c["allocate ok"] ?? 0, "successful allocations").toBeGreaterThanOrEqual(15);
+  const exercised = (c: Record<string, number>, minAllocations: number) => {
+    expect(c["allocate ok"] ?? 0, "successful allocations").toBeGreaterThanOrEqual(minAllocations);
     expect((c["unwind ok"] ?? 0) + (c["owner-unwind ok"] ?? 0) + (c["exit done"] ?? 0), "unwinds and exits").toBeGreaterThanOrEqual(15);
   };
   it("invariants: 400 random steps across two owners and two delegates, fixed seed", () => {
     const counts = walk(20261014, 400);
     console.log("  seed 20261014           :", summary(counts));
-    exercised(counts);
-  });
+    exercised(counts, 15);
+  }, TIMEOUT);
   it("invariants: 400 random steps, from a random seed printed for replay", () => {
     const seed = Number(process.env.INVARIANT_SEED ?? Math.floor(Math.random() * 2 ** 31));
     console.log(`  random seed ${seed} (replay with INVARIANT_SEED=${seed})`);
     const counts = walk(seed, 400);
     console.log("  seed", seed, "          :", summary(counts));
-    exercised(counts);
-  });
+    exercised(counts, 5);
+  }, TIMEOUT);
 });
