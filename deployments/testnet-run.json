@@ -3,56 +3,56 @@
   "asset": "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token",
   "owner": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
   "delegate": "ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW",
-  "vault": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v4",
+  "vault": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v5",
   "venue": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc",
   "steps": [
     {
       "label": "owner allowlists testnet sBTC",
       "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0xb4b8f90d5bdc9fefcbe1e73d6419ed45b5dc8fcd30cae27bf55df64c5ea2fa10",
-      "block": 723622,
+      "txid": "0xeebd3d05663ef78a6204883bb2bf976bea09221381438d49983f93476c218a94",
+      "block": 725696,
       "result": "(ok true)"
     },
     {
       "label": "owner allowlists the venue",
       "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0x2aca0ba6218cc8d203c69bfcc43b1c5c36a2c51b6b73109036b189fcaae03740",
-      "block": 723625,
+      "txid": "0x9d4253b2003624f7043a220534ca137b6f25eabb679f0f897480e156894a265f",
+      "block": 725697,
       "result": "(ok true)"
     },
     {
       "label": "owner deposits 20,000 sats",
       "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0x5098a2eddae24d8a8bc2ad06d536c9ea230f5068e9933bfbbd35b47d193706bf",
-      "block": 723627,
+      "txid": "0xac2621c9cd133efbc29e94d0a4d5641701acd922757a4eb464d06cf5b8130b5d",
+      "block": 725699,
       "result": "(ok true)"
     },
     {
       "label": "owner grants the delegate",
       "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0xd7d5d87dc429e9d7813cc8be199c2cb20735c87a0f0b2407def0656bb690985f",
-      "block": 723630,
+      "txid": "0x89bd88cbfcade2f91623a6ae08806896c826bf8bae34809f4040311c3b63d013",
+      "block": 725701,
       "result": "(ok true)"
     },
     {
       "label": "delegate allocates 10,000",
       "from": "ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW",
-      "txid": "0x2a5ec5eecf807559ca5c3344063908dbbfc9e844c398749f531e00843dddda05",
-      "block": 723632,
+      "txid": "0x4b7b31258e76db2a4aa30b5a041dcfc745d2c0e2c7ae44bc72bc1ab935f567ad",
+      "block": 725703,
       "result": "(ok u10000)"
     },
     {
       "label": "delegate unwinds 10,000",
       "from": "ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW",
-      "txid": "0xc2363e157b52c16435440b32b1190424596559c9f4472e5c868363c9b5bcbeeb",
-      "block": 723634,
+      "txid": "0x43d5677d375d8ece7fc31494310718935ac625b6167aef7843043b95d70bb3f7",
+      "block": 725705,
       "result": "(ok u10000)"
     },
     {
       "label": "owner withdraws 20,000 sats",
       "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-      "txid": "0xe28bb2362926253228a9609022552bff46879792d6b61ac247fa5e9eefa5f09d",
-      "block": 723636,
+      "txid": "0xa99de5b3e661885e7d8f708e72525991b7a52138d09a4308085cec7705bc3f5e",
+      "block": 725709,
       "result": "(ok true)"
     }
   ],
@@ -60,16 +60,17 @@
     "before": {
       "ownerIdleInVault": "u0",
       "ownerPosition": "u0",
-      "ownerSbtc": "(ok u300000)",
+      "ownerSbtc": "(ok u460000)",
       "vaultSbtc": "(ok u0)",
       "venueSbtc": "(ok u0)"
     },
     "after": {
       "ownerIdleInVault": "u0",
       "ownerPosition": "u0",
-      "ownerSbtc": "(ok u300000)",
+      "ownerSbtc": "(ok u460000)",
       "vaultSbtc": "(ok u0)",
       "venueSbtc": "(ok u0)"
-    }
+    },
+    "outside": []
   }
 }

@@ -25,7 +25,7 @@ confined to their managers' own balance sheets.
 
 | Network | Deployment | Evidence |
 | --- | --- | --- |
-| Stacks testnet | Version 4 of the vault on testnet's official sBTC, with a mock yield venue. A reference delegate holding only its own key allocated and unwound under a mandate. | E-030, E-031 |
+| Stacks testnet | Version 5 of the vault on testnet's official sBTC, with a mock yield venue. A reference delegate holding only its own key allocated and unwound under a mandate, and the vault refused four calls the mandate forbids, on the record. | E-037 |
 | Stacks mainnet, forked | The vault tested against Zest's sBTC vault and, through an adapter, Granite's USDCx lending pool. The full test suite runs in continuous integration. | E-011, E-028 |
 | Stacks mainnet | A minimal probe contract that deposited sBTC into Zest and withdrew it. | E-001, E-002 |
 
@@ -97,42 +97,56 @@ on a decentralized exchange.
 
 ### Testnet
 
-Version 4 of the vault is deployed on Stacks testnet and operates on testnet's
+Version 5 of the vault is deployed on Stacks testnet and operates on testnet's
 official sBTC. Zest is not available on testnet, so the yield venue is the one
 stand-in: a mock venue that implements the same venue trait as Zest's vault and
 holds testnet sBTC. The vault's integration with Zest's and Granite's deployed
 contracts is tested separately on a mainnet fork (`tests/v5-zest-fork.test.ts`,
-`tests/v5-granite-fork.test.ts`). Version 5 replaces version 4 and will be deployed
-on testnet as a rehearsal before mainnet (#34).
+`tests/v5-granite-fork.test.ts`).
 
 | Contract | Address | Deployed |
 | --- | --- | --- |
-| Vault, version 4 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v4` | [block 723,619](https://explorer.hiro.so/txid/0xeb74f75cb3eb9b7e3c13fb99f9f42b28af56124028967e316c8d4d8eab6b6cda?chain=testnet) |
+| Vault, version 5 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v5` | [block 725,660](https://explorer.hiro.so/txid/0x8d97cca7121c7d5ec43fae56db34efa636fe9a6971b7488b390060026bb635b2?chain=testnet) |
 | Mock venue for testnet sBTC | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc` | [block 719,933](https://explorer.hiro.so/txid/0x086d9b94b07098b68399dfabc75e5716329b8f81b7a8bbb5ef8e0de4a65497c4?chain=testnet) |
 | Token trait | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.sip-010-trait` | [block 719,259](https://explorer.hiro.so/txid/0x166a1bab5b3105827474def3ee7db1635006818573490b89f7ef8781538f23ee?chain=testnet) |
 | Venue trait | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.venue-trait` | [block 719,260](https://explorer.hiro.so/txid/0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b?chain=testnet) |
 | sBTC, testnet's official deployment | `SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token` | [block 1,162](https://explorer.hiro.so/txid/0x158530a55b6d96a611dd0389a34410986632ca698330542cbc3fe810a3c39aa0?chain=testnet) |
 
-Version 3, the version Milestone 1 recorded, remains deployed at
-`ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v3` (E-024).
+Versions 4 and 3 remain deployed at
+`ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v4` (E-030, E-031) and
+`ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v3` (E-024). Neither
+holds any funds, and neither is used: version 4 contains the flaw that version 5
+fixes (#48).
 
-A reference delegate (`scripts/delegate.mjs`), holding only its own key, ran five
-rounds against a mandate the owner granted it, moving toward a target share of the
-owner's funds in the venue each round. Every transaction is signed by the delegate
-alone, with deny-mode post-conditions that fix what the vault sends:
+A reference delegate (`scripts/delegate.mjs`), holding only its own key, ran four
+rounds on version 5 against a mandate the owner granted it, moving toward a target
+share of the owner's funds in the venue each round. Every transaction is signed by
+the delegate alone, with deny-mode post-conditions that fix what the vault sends:
 
 | Round | Action | Result | Transaction |
 | --- | --- | --- | --- |
-| Target 75% | Allocate 20,000 sats | `(ok u20000)` | [block 723,654](https://explorer.hiro.so/txid/0x6ee1c8463185dd56c29d1cdfbf4a6862826992c07d98570853edc391438a0176?chain=testnet) |
-| Target 25% | Unwind 10,000 shares | `(ok u10000)` | [block 723,658](https://explorer.hiro.so/txid/0x663709b37ae8d9f3ab499e46a5fb9bf2a86b017ee8cfe6392d369403fbe6c39c?chain=testnet) |
-| Target 75% | Allocate 20,000 sats | `(ok u20000)` | [block 723,660](https://explorer.hiro.so/txid/0xe131289dc88397c1e97ef610b046b09cd46cce98a275682b50a636851900df51?chain=testnet) |
-| Target 25% | Unwind 20,000 shares | `(ok u20000)` | [block 723,662](https://explorer.hiro.so/txid/0x80a7df02f0cb17cf4ca3767f8b52f07d781d1af2d1249fa3da8551c99661e9da?chain=testnet) |
-| Target 0% | Unwind 10,000 shares | `(ok u10000)` | [block 723,664](https://explorer.hiro.so/txid/0x5d5b85d71d51dff04f903dfd446799481c1af4053c13fbbb1f8032e033ab2d38?chain=testnet) |
+| Target 75% | Allocate 20,000 sats | `(ok u20000)` | [block 727,171](https://explorer.hiro.so/txid/0xeb0f3faeb98ae7ccc63979c37620e645bd627b0b901e7aef9931ee9a59e2c6cb?chain=testnet) |
+| Target 25% | Unwind 10,000 shares | `(ok u10000)` | [block 727,173](https://explorer.hiro.so/txid/0xd6881ed3eecc1f5901497689332f5c34c7d9317781422e74661115207df070ee?chain=testnet) |
+| Target 75% | Allocate 20,000 sats | `(ok u20000)` | [block 727,175](https://explorer.hiro.so/txid/0xce1c196f5af094d61ef14300aa35e559d3ad81dc1b2a624a167333f71009bdc9?chain=testnet) |
+| Target 0% | Unwind 30,000 shares | `(ok u30000)` | [block 727,177](https://explorer.hiro.so/txid/0x837c5e2148d7f5ed91457e019adcacb1202a59c4730431a112c585d59697ae9e?chain=testnet) |
 
-The owner's only transactions were funding the delegate's fees, the allowlists, the
-deposit and the grant. The records are in `deployments/testnet-delegate.json` and
-`deployments/testnet-delegate-run.json`, and every transaction is listed in
-[docs/EVIDENCE.md](docs/EVIDENCE.md), entries E-030 and E-031.
+The delegate then attempted four calls that its mandate forbids, each signed by the
+delegate alone in deny mode with no post-conditions, so that none could move an
+asset even if the vault accepted it. The vault refused every one, and none emitted
+an asset event:
+
+| Attempt | Policy in force | Result | Transaction |
+| --- | --- | --- | --- |
+| An allocation of 20,001 sats | The per-move cap is 20,000 sats | `(err u102)` | [block 727,181](https://explorer.hiro.so/txid/0x9732ed77ee3bd662c60d3a8d5d57525517b95f8068e3d88e1817ed5ee94b20a6?chain=testnet) |
+| An allocation into a venue the owner never listed | The owner listed only the testnet sBTC venue | `(err u107)` | [block 727,183](https://explorer.hiro.so/txid/0x789756a7e3ff1a1720058787e85b8078f8e03a497acf4f02fbbc1374c947083a?chain=testnet) |
+| A withdrawal of 1 sat | Only an owner withdraws, from the owner's own balance | `(err u105)` | [block 727,186](https://explorer.hiro.so/txid/0x5c506e19d456730b3468ec3be2b1482f29ec3404c522b74729159758dae6356d?chain=testnet) |
+| An allocation after the owner revoked the mandate | No mandate is in force | `(err u100)` | [block 727,192](https://explorer.hiro.so/txid/0x463f4c5f763d07471681b50e05b0eab96b6233d96ee89adef42a4b9069dc63ff?chain=testnet) |
+
+The owner's only transactions were the allowlists, the deposit, the grant, the
+revocation and the final withdrawal of all 40,000 sats. The records are in
+`deployments/testnet-delegate.json`, `deployments/testnet-delegate-run.json` and
+`deployments/testnet-refusals.json`, and every transaction is listed in
+[docs/EVIDENCE.md](docs/EVIDENCE.md), entry E-037.
 
 ### Mainnet probe
 
@@ -230,7 +244,11 @@ To deploy an independent copy and run the same lifecycle:
    record its address. Then run `npm run testnet:mandate`, which, as the owner,
    funds a mandate with 40,000 sats of testnet sBTC and grants it to that address,
    and `npm run delegate -- testnet 7500,2500`, which runs the delegate toward each
-   target in turn.
+   target in turn. `npm run delegate -- testnet attempt <kind>`, where the kind is
+   `over-cap`, `unlisted-venue`, `withdraw` or `revoked`, has the delegate attempt a
+   call the mandate forbids and records the refusal. `npm run testnet:mandate --
+   revoke` and `npm run testnet:mandate -- exit` revoke the mandate and return all
+   of the owner's funds.
 
 ## Known limitations
 

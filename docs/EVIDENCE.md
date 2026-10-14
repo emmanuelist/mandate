@@ -39,6 +39,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-034 | 2026-10-14 | After #45, the local suites wait on Hiro's rate limit zero times, and the fork suite's own waits did not fall. Before the change, `main` waited 12 times (630 s), all in the fork suite. After it, the pull request's run waited 14 times (645 s) in the fork suite and once (37 s) in the Jing suite, and `main`'s run waited 11 times (586 s), all in the fork suite. A fresh clone's `npm ci && npm test` passed: 93 of 93 local and 41 of 41 fork tests, exit 0 in 523 s | runs [38552641786](https://github.com/emmanuelist/mandate/actions/runs/38552641786), [38575611800](https://github.com/emmanuelist/mandate/actions/runs/38575611800) and [38577444982](https://github.com/emmanuelist/mandate/actions/runs/38577444982); waits counted from each run's log lines `Rate limited, retrying after N seconds` | `96d956e` |
 | E-035 | 2026-10-14 | The structured review found that v4 credits a venue's call back twice (#48), and v5 closes the vault while a venue runs (D-022). On v4, an owner who lists a venue of their own takes another owner's deposit through the owner's unwind, the delegate's unwind, and a public balance read after the redeem: each time mallory's side puts in 500,000 and takes out 999,999, and alice's withdrawal of her 500,000 fails with the vault holding 1. On v5 each attempt is refused with nothing moved, with `u120`, or `u109` where the venue passes the refusal on from a read, and a venue that ignores the refusal leaves the books exact. The adversarial suite's 15 re-entry cases pass, two of them Clarity's own abort of a call back into the running function. v5 without its check fails 21 tests, among them all 13 adversarial re-entry cases it refuses. The invariant walk, with one venue calling back at random, holds on v5 over the fixed seed and 73 random seeds and refuses every call back; on v4 every one of 8 seeds fails, 5 of them at the step where an unwind is credited twice. All three manifests check with no errors. Local suites: 119 of 119 in 7 files. Fork suite on v5: 41 of 41 in 16 files | `npx vitest run --config vitest.local.config.ts`; `INVARIANT_VAULT=mandate-vault-v4 INVARIANT_SEED=<n>` on the walk; a mutant; `npx vitest run`; `clarinet check` (output below) | `13a3fda` |
 | E-036 | 2026-10-14 | The structured review is published and its static checks run. `docs/REVIEW.md` logs 15 findings with their severity, status and fixing commit or reason, among them R-001, the flaw #48 fixed. All four manifests the check covers type-check with no errors, and each of the 64 warnings Clarinet raises is justified in the log at its line. The check fails on a warning the log doesn't list, on a row whose warning is gone, on a removed row, and on a contract that doesn't type-check. Clarinet's taint analysis with `callee_filter` on gave v5 14 warnings in 6 of 10 runs and 19 in 4; off, 26 in 10 of 10. From an empty home with no cache, `clarinet check` fetches 20 requirements and writes clean JSON. The two deployed contracts `granite-venue` reads, `state-v1` and `usdcx`, return `(ok (ft-get-balance ...))` from `get-balance` | `npm run static`; four throwaway mutants; ten runs each way; `.cache/requirements` (output below) | `2d0a846` |
+| E-037 | 2026-10-14 | v5 is rehearsed on testnet (#52). `npm run testnet` deployed v5 with the repo's source ([block 725,660](https://explorer.hiro.so/txid/0x8d97cca7121c7d5ec43fae56db34efa636fe9a6971b7488b390060026bb635b2?chain=testnet)), set testnet sBTC's cap and read it back as `u1000000`, and ran the lifecycle on v5: seven transactions, each `(ok ...)`, with the books reconciling exactly. A first attempt at the lifecycle succeeded step by step but failed to reconcile, because the Hiro Platform faucet's address sent the owner 10,000 sats mid-run, at block 725,677; the run now reconciles the owner's wallet net of transfers from outside it. Under a mandate on v5, the reference delegate allocated 20,000, unwound 10,000, allocated 20,000 and unwound 30,000, signing alone in deny mode. It then attempted four calls the mandate forbids, each refused with no events: 20,001 sats against a per-move cap of 20,000 (`u102`), a venue the owner never listed (`u107`), a withdrawal (`u105`), and an allocation after the owner revoked (`u100`). The owner revoked and withdrew all 40,000 sats, and withdrew the 40,000 left in v4, so no testnet vault holds funds. `npm run testnet:verify`: 25 of 25 | `npm run testnet`, `npm run testnet:mandate`, `npm run delegate -- testnet 7500,2500,7500,0` and `attempt <kind>`, `npm run testnet:verify` (output below) | `e749256` |
 
 ### E-001 output
 ~~~text
@@ -761,4 +762,52 @@ exit 0; stdout parses as JSON, success true; 20 requirements fetched; stderr: no
 # the Clarinet release CI installs
 $ shasum -a 256 clarinet-linux-x64-glibc.tar.gz
 2f77903d3af5046df5730c23d4451b03ddd56c7206efd466a5a7f6acab376c75  (the same line is in the release's checksums.txt)
+~~~
+
+### E-037 output
+~~~text
+# the first lifecycle run on v5 stopped at its reconciliation
+Error: books don't reconcile: ownerSbtc is (ok u460000), was (ok u450000)
+# the owner's transfers in that window: one not from the run
+725677 0xf25e36583a4b86705d62ec2fcd8850455467f754b15365e0834673fb961472d9 sbtc-token transfer, STDMN71Z0H9EF8CRKAWTGBB5YS0BNV26HZ79QFFP to the owner, 10000 sats
+
+# the rerun, after e749256
+books reconcile, before: {"ownerIdleInVault":"u0","ownerPosition":"u0","ownerSbtc":"(ok u460000)","vaultSbtc":"(ok u0)","venueSbtc":"(ok u0)"}
+                  after:  {"ownerIdleInVault":"u0","ownerPosition":"u0","ownerSbtc":"(ok u460000)","vaultSbtc":"(ok u0)","venueSbtc":"(ok u0)"}
+
+# v4's leftover, withdrawn by the owner
+owner withdraws 40,000 sats from v4: (ok true), block 727208, 0xd9b26cb9ddb937cbebcf42ffc1f50f59b0f6731f0af3848a02dd9c104f47212e
+
+$ npm run testnet:verify
+contracts deployed by ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5:
+  ok   sip-010-trait     block 719259, Clarity 4, source identical to the repo
+  ok   venue-trait       block 719260, Clarity 4, source identical to the repo
+  ok   mandate-vault-v5  block 725660, Clarity 4, source identical to the repo
+  ok   mock-venue-sbtc   block 719933, Clarity 4, source identical to the repo
+end-to-end run, owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5, delegate ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW:
+  ok   owner allowlists testnet sBTC    success, block 725696, (ok true)
+  ok   owner allowlists the venue       success, block 725697, (ok true)
+  ok   owner deposits 20,000 sats       success, block 725699, (ok true)
+  ok   owner grants the delegate        success, block 725701, (ok true)
+  ok   delegate allocates 10,000        success, block 725703, (ok u10000)
+  ok   delegate unwinds 10,000          success, block 725705, (ok u10000)
+  ok   owner withdraws 20,000 sats      success, block 725709, (ok true)
+reference delegate ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6, signing alone for owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5:
+  ok   allocate  success, block 727171, (ok u20000), signer the delegate, post-conditions deny
+  ok   unwind    success, block 727173, (ok u10000), signer the delegate, post-conditions deny
+  ok   allocate  success, block 727175, (ok u20000), signer the delegate, post-conditions deny
+  ok   unwind    success, block 727177, (ok u30000), signer the delegate, post-conditions deny
+the owner's side of that mandate, owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5, vault ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v5:
+  ok   owner allowlists testnet sBTC    success, block 725714, (ok true)
+  ok   owner allowlists the venue       success, block 725716, (ok true)
+  ok   owner deposits 40,000 sats       success, block 725718, (ok true)
+  ok   owner grants the delegate        success, block 725720, (ok true)
+  ok   owner revokes the delegate       success, block 727189, (ok true)
+  ok   owner withdraws 40000 sats       success, block 727196, (ok true)
+refusals: the delegate ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6 attempting what its mandate forbids, in ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v5:
+  ok   over-cap        allocate abort_by_response, (err u102), 0 events, signer the delegate, block 727181
+  ok   unlisted-venue  allocate abort_by_response, (err u107), 0 events, signer the delegate, block 727183
+  ok   withdraw        withdraw abort_by_response, (err u105), 0 events, signer the delegate, block 727186
+  ok   revoked         allocate abort_by_response, (err u100), 0 events, signer the delegate, block 727192
+all 25 checks pass
 ~~~

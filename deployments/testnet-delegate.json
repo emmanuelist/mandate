@@ -2,12 +2,12 @@
   "network": "testnet",
   "delegate": "ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6",
   "owner": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
-  "vault": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v4",
+  "vault": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v5",
   "venue": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc",
   "asset": "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token",
   "limits": {
     "maxNotional": 20000,
-    "expires": 28284,
+    "expires": 28358,
     "maxSlipBps": 100,
     "maxTrades": 10,
     "windowLen": 144,
@@ -16,34 +16,41 @@
   },
   "ownerSteps": [
     {
-      "label": "fund the delegate's fees: 2 STX",
-      "txid": "0x83d3d9689db4677bb4b7037dc144dd3a307592f1d171ed7861960ddfa70e48cc",
-      "block": 723640,
-      "result": "(ok true)"
-    },
-    {
       "label": "owner allowlists testnet sBTC",
-      "txid": "0xc77202494068051c5d1c8e6b42a5d4e4671c7e00ae2d302b193c4cf591f5e453",
-      "block": 723642,
+      "txid": "0xfcfd0f14e97c783673ba480e20532c738ec4f436900675ef82ffed6f28ae0b82",
+      "block": 725714,
       "result": "(ok true)"
     },
     {
       "label": "owner allowlists the venue",
-      "txid": "0xc2aa45cf2f9ba87e7f39180cee61c1ffe85ffde9532d452bcca12ec31fe004f6",
-      "block": 723643,
+      "txid": "0xd3a73b78af3b8e585bff49a7efc5521e1b147e6db0819df465fb9ee8c9140e1a",
+      "block": 725716,
       "result": "(ok true)"
     },
     {
       "label": "owner deposits 40,000 sats",
-      "txid": "0x0c7a2acf6b867d558e4fab912693f93f64f535708cdd88f64fa3a53855ffa697",
-      "block": 723646,
+      "txid": "0xce6b9f4a2c66d45f4acab283f130f32de4872aafee9aeac07480f9950b9843a2",
+      "block": 725718,
       "result": "(ok true)"
     },
     {
       "label": "owner grants the delegate",
-      "txid": "0xf0f436614676bbcf9c476162aa8d1c2ef11ca128d5f38bc309b64c1e345b5754",
-      "block": 723648,
+      "txid": "0x2ad2dd1b2d948147d2796d99a15cc043fa1ed5b88acc7bc13b19f34a2969e0e3",
+      "block": 725720,
+      "result": "(ok true)"
+    },
+    {
+      "label": "owner revokes the delegate",
+      "txid": "0x8ef728a9cba6612b2a3145a226f38021e4b18770f4df0c162be29863a9936377",
+      "block": 727189,
+      "result": "(ok true)"
+    },
+    {
+      "label": "owner withdraws 40000 sats",
+      "txid": "0xf185439e90729d311f9b540162b930c854ef33e0a102fa82d08e18d2eaa071a0",
+      "block": 727196,
       "result": "(ok true)"
     }
-  ]
+  ],
+  "unlistedVenue": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue"
 }

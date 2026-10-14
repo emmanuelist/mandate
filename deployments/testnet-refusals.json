@@ -1,0 +1,82 @@
+{
+  "network": "testnet",
+  "delegate": "ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6",
+  "owner": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+  "vault": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v5",
+  "attempts": [
+    {
+      "kind": "over-cap",
+      "at": "2026-10-14T18:54:31.068Z",
+      "burn": 27401,
+      "call": "allocate",
+      "args": [
+        "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+        "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc",
+        "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token",
+        "20001"
+      ],
+      "policy": "the per-move cap is 20000",
+      "expect": 102,
+      "txid": "0x9732ed77ee3bd662c60d3a8d5d57525517b95f8068e3d88e1817ed5ee94b20a6",
+      "block": 727181,
+      "result": "(err u102)",
+      "status": "abort_by_response",
+      "events": 0
+    },
+    {
+      "kind": "unlisted-venue",
+      "at": "2026-10-14T18:54:46.268Z",
+      "burn": 27401,
+      "call": "allocate",
+      "args": [
+        "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+        "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue",
+        "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token",
+        "1"
+      ],
+      "policy": "the owner listed ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc for this asset, and not ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue",
+      "expect": 107,
+      "txid": "0x789756a7e3ff1a1720058787e85b8078f8e03a497acf4f02fbbc1374c947083a",
+      "block": 727183,
+      "result": "(err u107)",
+      "status": "abort_by_response",
+      "events": 0
+    },
+    {
+      "kind": "withdraw",
+      "at": "2026-10-14T18:55:01.360Z",
+      "burn": 27401,
+      "call": "withdraw",
+      "args": [
+        "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token",
+        "1"
+      ],
+      "policy": "withdraw pays the caller from its own idle balance, and the delegate has none",
+      "expect": 105,
+      "txid": "0x5c506e19d456730b3468ec3be2b1482f29ec3404c522b74729159758dae6356d",
+      "block": 727186,
+      "result": "(err u105)",
+      "status": "abort_by_response",
+      "events": 0
+    },
+    {
+      "kind": "revoked",
+      "at": "2026-10-14T18:55:49.814Z",
+      "burn": 27401,
+      "call": "allocate",
+      "args": [
+        "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+        "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc",
+        "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token",
+        "1"
+      ],
+      "policy": "the owner revoked the mandate",
+      "expect": 100,
+      "txid": "0x463f4c5f763d07471681b50e05b0eab96b6233d96ee89adef42a4b9069dc63ff",
+      "block": 727192,
+      "result": "(err u100)",
+      "status": "abort_by_response",
+      "events": 0
+    }
+  ]
+}

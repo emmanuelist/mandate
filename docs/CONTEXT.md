@@ -31,9 +31,10 @@ Deployed by `npm run testnet` from account 1 of `settings/Testnet.toml`, which d
 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.venue-trait` | 4 | 719,260 | same |
 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v3` (M1's version, no longer in the manifest) | 4 | 719,267 | E-024 |
 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc` (holds testnet sBTC) | 4 | 719,933 | same |
-| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v4`, with testnet sBTC's cap at 1,000,000 sats | 4 | 723,619 | `npm run testnet:verify`, 2026-10-14 (E-030) |
+| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v5`, with testnet sBTC's cap at 1,000,000 sats | 4 | 725,660 | `npm run testnet:verify`, 2026-10-14 (E-037) |
+| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v4` (M2's first testnet runs, superseded by v5, #48; no longer in the manifest; holds nothing) | 4 | 723,619 | E-030, E-037 |
 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-token` (earlier run only) | 3 | 719,263 | E-017 |
-| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue` (earlier run only) | 4 | 719,265 | E-017 |
+| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue` (earlier run; the unlisted venue in the record of refusals) | 4 | 719,265 | E-017, E-037 |
 
 ## SDKs and tools
 | Tool | Version | Notes | Verified |
@@ -75,6 +76,8 @@ Deployed by `npm run testnet` from account 1 of `settings/Testnet.toml`, which d
 - **`try!` needs a known error type.** A function that only ever returns `(ok ...)`, such as v4's `allow-asset`, has an indeterminate error type, so `try!` on a call to it fails type-checking; use `unwrap-panic`. v5's can return `u120`, so `try!` works. `contracts/reentrant-venue-v4.clar`, 2026-10-14.
 - **`check_checker` with `callee_filter = true` is nondeterministic.** On v5 it reported 14 warnings in 6 of 10 runs and 19 in 4; with it off, 26 in 10 of 10. `Clarinet-review.toml` keeps it off (E-036).
 - **`clarinet check` can't resolve `Clarinet-jing.toml`.** Jing's market contract names `SPMV5HDZ4EMB8XY7HAYT3XW0DF7DZ4E8XEG2J1T8.pyth-lazer-decoder-v1`, which isn't a listed requirement, so the check errors with `use of unresolved contract`; the SDK resolves it on the fork, and the Jing suite passes. 2026-10-14.
+- **A faucet payout can land in the middle of a run.** The Hiro Platform faucet's address, `STDMN71Z0H9EF8CRKAWTGBB5YS0BNV26HZ79QFFP`, sent the owner 10,000 sats of testnet sBTC at block 725,677, between two steps of the lifecycle run, and broke its reconciliation of the owner's wallet. `/extended/v1/address/<address>/transactions_with_transfers` lists each transaction's `ft_transfers` (sender, recipient, amount, asset), and the run now reconciles net of transfers outside its own transactions (E-037).
+- **A refused call is still mined.** A contract call whose function returns `err` costs its fee and confirms with `tx_status` `abort_by_response`, its `tx_result` the error, and `event_count` 0. Signed in deny mode with no post-conditions, it couldn't move an asset even if accepted (D-024, E-037).
 - **All manifests share one simnet plan file**, `deployments/default.simnet-plan.yaml`. A run whose manifest's plan differs from the file rewrites it as workers start, and a worker can fail to start reading it half-written: seen once, on the first local-suite run after `Clarinet-local.toml` was created, and the next six runs passed. CI retries every suite (D-015). 2026-10-14.
 - **The suites that touch only local contracts need no fork.** On `Clarinet-local.toml`, which has no `[repl.remote_data]`, they ran 93 tests in 5 files in about 3 s and sent nothing to Hiro (#45); after #48, 119 tests in 7 files in about 11 s. 2026-10-14.
 - **A contract that doesn't type-check stops the simulator from starting**, and vitest reports only `Failed to start forks worker`, the same message a rate-limited fork gives. After a contract change, run `clarinet check` before blaming the network. 2026-10-14.

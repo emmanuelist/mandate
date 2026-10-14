@@ -1,10 +1,10 @@
 # State
-_Last verified: 2026-10-14 at `2d0a846`_
+_Last verified: 2026-10-14 at `e749256`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M2 · Mainnet Launch + Adversarial Suite (due 2026-12-05, 52 days left). M1's exit criteria are met (E-014, E-022, E-024); D-017 awaits sign-off.
-**Next action:** v5's testnet rehearsal and the mainnet runbook (#34): deploy v5 on testnet, rerun the lifecycle and the reference delegate on it, and prepare v5's and the Granite adapter's mainnet deployment
-**Blocked on:** nothing for the testnet rehearsal. Mainnet itself (#34 to #36) needs the owner's go-ahead, and the owner to fund the deployer with STX and the mandate with sBTC and about 20 USDCx.
+**Next action:** the mainnet deployment of v5 and the Granite adapter (#34): a runbook and deploy script, dry-run against mainnet without broadcasting. The transactions themselves wait for the owner's go-ahead
+**Blocked on:** nothing for preparing #34. Mainnet transactions (#34 to #36) need the owner's go-ahead, STX for the deployer, and sBTC and about 20 USDCx for the mandate.
 
 ## Works (verified this session)
 | Capability | Verified by | Evidence |
@@ -12,9 +12,10 @@ _Last verified: 2026-10-14 at `2d0a846`_
 | The structured review is published: `docs/REVIEW.md` logs 15 findings with severity, status and fixing commit or reason. Static checks: four manifests type-check with no errors, and each of Clarinet's 64 warnings is justified at its line, or the check fails | `npm run static`; four mutants make it fail | E-036, D-023 |
 | v5 closes the vault while a venue runs: a venue that calls back in is refused with nothing moved, and the attack that drains another owner on v4 fails on v5 through every path tried | 9 tests on v4 and v5; 15 adversarial re-entry cases; v5 without the check fails 21 tests | E-035, D-022 |
 | A stranger can follow the README: from a fresh clone, `npm ci`, both mainnet fork suites and `npm run testnet:verify` pass with only Node on PATH. The testnet fork suite was added after that run | fresh clone of `9-readme` from GitHub; the testnet suite locally | E-022, E-023 |
-| v4, the testnet sBTC venue and both traits are deployed on testnet, each with the repo's source and Clarity version, and testnet sBTC's cap is set | `npm run testnet:verify`: 16 of 16 checks | E-030 |
-| One mandate end to end on testnet with testnet's official sBTC, now on v4: deposit, grant, allocate, unwind, withdraw, and the books reconcile | 7 transactions, every one `(ok …)` | E-024, E-030 |
-| The reference delegate moves funds without the owner signing: two allocations and three unwinds on testnet, signed by the delegate alone in deny mode, reading its limits through `mandate-of` | testnet transactions; 6 decision tests | E-031 |
+| v5, the testnet sBTC venue and both traits are deployed on testnet, each with the repo's source and Clarity version, and testnet sBTC's cap reads back as 1,000,000 sats | `npm run testnet:verify`: 25 of 25 checks | E-037 |
+| One mandate end to end on testnet with testnet's official sBTC, now on v5: deposit, grant, allocate, unwind, withdraw, and the books reconcile, net of any transfer from outside the run | 7 transactions, every one `(ok …)` | E-024, E-037 |
+| The reference delegate moves funds without the owner signing: two allocations and two unwinds on v5, signed by the delegate alone in deny mode, reading its limits through `mandate-of` | testnet transactions; 10 tests of its decisions and attempts | E-031, E-037 |
+| The vault refuses the delegate on the record: four calls its mandate forbids, signed by the delegate on testnet (over the per-move cap, an unlisted venue, a withdrawal, after a revoke), each refused with its code and no events | `npm run testnet:verify` | E-037, D-024 |
 | The vault and the testnet sBTC venue against testnet's official sBTC, on a testnet fork | 2 tests, pinned at testnet block 719,800 | E-023 |
 | `npm run testnet` rebuilds and reruns in one command, and stops rather than run against a stale deployment | reruns on the live deployment; a contract edited locally | E-019, E-024 |
 | v3: the delegate allocates and unwinds through the venue trait; every v2 limit and fix holds; the owner can always unwind | 23 tests against a deterministic venue | E-010 |
@@ -40,14 +41,14 @@ _Last verified: 2026-10-14 at `2d0a846`_
 ## Deployed
 | What | Network | Address | Last checked |
 |---|---|---|---|
-| mandate-vault-v4, mock-venue-sbtc, sip-010-trait, venue-trait; v3, mock-token and mock-venue from M1's runs | Stacks testnet | all under `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5` (`docs/CONTEXT.md`) | 2026-10-14, `npm run testnet:verify` |
+| mandate-vault-v5, mock-venue-sbtc, sip-010-trait, venue-trait; v4 and v3, which hold nothing, and mock-token and mock-venue from earlier runs | Stacks testnet | all under `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5` (`docs/CONTEXT.md`) | 2026-10-14, `npm run testnet:verify` |
 | mandate-probe-mainnet | Stacks mainnet | `SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH.mandate-probe-mainnet` | 2026-10-14 |
 
 The vault is not on mainnet yet; that is M2.
 
 ## Broken or unverified
-- v3 stays on testnet as M1's record and still identifies callers by `tx-sender` (E-027). Nothing uses it now that v4 runs there (E-030).
-- **v3 and v4 credit a venue's call back twice during an unwind**, so an owner who lists their own venue can take other owners' funds (#48, E-035). Both are on testnet only and must not hold value. v5 fixes it (D-022) and is not deployed anywhere yet: its testnet rehearsal comes with #34.
+- v3 stays on testnet as M1's record and still identifies callers by `tx-sender` (E-027). Nothing uses it.
+- **v3 and v4 credit a venue's call back twice during an unwind**, so an owner who lists their own venue can take other owners' funds (#48, E-035). Both are on testnet only and hold nothing. v5 fixes it (D-022) and is deployed on testnet (E-037); mainnet is #34.
 - CI's fork suite still waits on Hiro's rate limit 11 to 14 times a run after #45; the 93 local tests wait none (E-034).
 - Jing fills: untested, since settlement needs a signed Pyth update.
 

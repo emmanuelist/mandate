@@ -12,10 +12,10 @@
       "txid": "0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b",
       "block": 719260
     },
-    "mandate-vault-v4": {
-      "id": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v4",
-      "txid": "0xeb74f75cb3eb9b7e3c13fb99f9f42b28af56124028967e316c8d4d8eab6b6cda",
-      "block": 723619
+    "mandate-vault-v5": {
+      "id": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v5",
+      "txid": "0x8d97cca7121c7d5ec43fae56db34efa636fe9a6971b7488b390060026bb635b2",
+      "block": 725660
     },
     "mock-venue-sbtc": {
       "id": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc",
@@ -25,9 +25,7 @@
   },
   "caps": {
     "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token": {
-      "cap": 1000000,
-      "txid": "0x3efaf54685cbccd0c4a031c15c1fb68e784ca03f9635300c5f77850cdb1f7fb7",
-      "block": 723620
+      "cap": 1000000
     }
   }
 }
