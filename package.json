@@ -12,7 +12,9 @@
     "testnet:mandate": "node scripts/testnet-mandate.mjs",
     "delegate:key": "node scripts/delegate-key.mjs",
     "delegate": "node scripts/delegate.mjs",
-    "static": "node scripts/static-check.mjs"
+    "static": "node scripts/static-check.mjs",
+    "mainnet:deploy": "node scripts/mainnet-deploy.mjs",
+    "mainnet:verify": "node scripts/mainnet-verify.mjs"
   },
   "dependencies": {
     "@stacks/clarinet-sdk": "^3.9.0",
