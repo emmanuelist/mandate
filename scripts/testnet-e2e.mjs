@@ -64,6 +64,8 @@ const held = await sbtcBalance(D);
 if (held < DEPOSIT) {
   throw new Error(`account 1 holds ${held} sats of testnet sBTC and the run needs ${DEPOSIT}: request testnet sBTC from the Hiro Platform faucet (see the README)`);
 }
+const tip = async () => (await fetch(`${API}/v2/info`).then((r) => r.json())).stacks_tip_height;
+const fromTip = await tip();
 const before = await books();
 const delegateStx = BigInt((await fetch(`${API}/extended/v1/address/${delegate.address}/stx`).then((r) => r.json())).balance);
 if (delegateStx < 1_000_000n) {
@@ -82,10 +84,32 @@ await step(`delegate unwinds ${fmt(MOVE)}`, delegate, call("unwind", [Cl.princip
 await step(`owner withdraws ${fmt(DEPOSIT)} sats`, owner, call("withdraw", [sbtc, Cl.uint(DEPOSIT)], owner));
 
 const after = await books();
-run.checks = { before, after };
-for (const [key, printed] of Object.entries(after)) {
-  if (amount(printed) !== amount(before[key])) throw new Error(`books don't reconcile: ${key} is ${printed}, was ${before[key]}`);
+const toTip = await tip();
+// sBTC that entered or left the owner's wallet in a transaction other than the run's
+// own, such as a faucet payout landing mid-run, never touched the vault. The owner's
+// wallet is reconciled net of it, and the record lists it; everything else must match
+// exactly.
+const ASSET_ID = `${SBTC.address}.${SBTC.name}::sbtc-token`;
+const ours = new Set(run.steps.map((s) => s.txid));
+const page = await fetch(`${API}/extended/v1/address/${D}/transactions_with_transfers?limit=50`).then((r) => r.json());
+const outside = [];
+for (const { tx, ft_transfers } of page.results) {
+  if (tx.block_height <= fromTip || tx.block_height > toTip || ours.has(tx.tx_id)) continue;
+  for (const f of ft_transfers ?? []) {
+    if (f.asset_identifier !== ASSET_ID) continue;
+    const net = (f.recipient === D ? BigInt(f.amount) : 0n) - (f.sender === D ? BigInt(f.amount) : 0n);
+    if (net !== 0n) outside.push({ txid: tx.tx_id, block: tx.block_height, from: f.sender, to: f.recipient, net: String(net) });
+  }
 }
+const outsideNet = outside.reduce((n, o) => n + BigInt(o.net), 0n);
+run.checks = { before, after, outside };
+for (const [key, printed] of Object.entries(after)) {
+  const expected = amount(before[key]) + (key === "ownerSbtc" ? outsideNet : 0n);
+  if (amount(printed) !== expected) {
+    throw new Error(`books don't reconcile: ${key} is ${printed}, was ${before[key]}${outside.length ? `, with ${outsideNet} moved from outside the run` : ""}`);
+  }
+}
+for (const o of outside) console.log(`outside the run: ${o.net} sats of testnet sBTC, ${o.from} to ${o.to}, block ${o.block}, ${o.txid}`);
 console.log("books reconcile, before:", JSON.stringify(before), "\n                  after: ", JSON.stringify(after));
 fs.writeFileSync("deployments/testnet-run.json", JSON.stringify(run, null, 2) + "\n");
 console.log("wrote deployments/testnet-run.json");
