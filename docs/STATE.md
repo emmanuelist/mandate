@@ -1,9 +1,9 @@
 # State
-_Last verified: 2026-10-14 at `655e5df`_
+_Last verified: 2026-10-14 at `7655365`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M1 · Core Vault + Zest Adapter on Testnet (due 2026-10-31, 17 days left)
-**Next action:** patch the test tooling's npm advisory (#24), then check M1's four exit criteria against EVIDENCE before D-017 goes for sign-off
+**Next action:** check M1's four exit criteria against EVIDENCE before D-017 goes for sign-off
 **Blocked on:** nothing. D-017, with one testnet stand-in, the venue, needs sign-off before M1 is submitted.
 
 ## Works (verified this session)
@@ -26,6 +26,7 @@ _Last verified: 2026-10-14 at `655e5df`_
 | CI: identity check and both fork suites on every pull request, each fork suite up to three attempts a minute apart | green on GitHub's runners; on #23 a failed attempt waited its minute and the retry passed | E-008, E-015, E-020, E-021 |
 | The protocol specification names every v3 test, and CI fails if one goes missing | `node scripts/spec-crosscheck.mjs`: 42 of 42 | E-014, E-016 |
 | `grant` refuses parameters that switch a limit off or abort later | 5 tests | E-016 |
+| `npm audit` finds no vulnerabilities | `npm audit` on the patched lockfile | E-025 |
 
 ## Deployed
 | What | Network | Address | Last checked |
@@ -36,7 +37,6 @@ _Last verified: 2026-10-14 at `655e5df`_
 The vault is not on mainnet yet; that is M2.
 
 ## Broken or unverified
-- `npm ci` reports one high-severity advisory in test tooling: `source-map-js` 1.2.1 under vitest (GHSA-68fv-2mgg-jv7q). Nothing here processes untrusted source maps (#24).
 - Jing fills: untested, since settlement needs a signed Pyth update.
 
 ## Open questions
