@@ -1,10 +1,10 @@
 # State
-_Last verified: 2026-10-14 at `75bf5d8`_
+_Last verified: 2026-10-14 at `0e29ba6`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M2 · Mainnet Launch + Adversarial Suite (due 2026-12-05, 52 days left). M1's exit criteria are met (E-014, E-022, E-024); D-017 awaits sign-off.
-**Next action:** v4 with the per-vault AUM cap (#29). The owner chooses the cap's amount.
-**Blocked on:** nothing for #29. The mainnet issues (#34 to #36) need the owner to fund the deployer with STX and the mandate with sBTC.
+**Next action:** authorize owners and delegates by `contract-caller` in v4, closing a phishing path v3 has (#40)
+**Blocked on:** nothing for #40. The mainnet issues (#34 to #36) need the owner to fund the deployer with STX and the mandate with sBTC.
 
 ## Works (verified this session)
 | Capability | Verified by | Evidence |
@@ -18,7 +18,8 @@ _Last verified: 2026-10-14 at `75bf5d8`_
 | v3 measures every venue call and refuses a hostile venue's attacks with nothing moved | 7 hostile-venue tests | E-012 |
 | v3 against Zest's real sBTC vault, with no adapter: allocate, unwind, owner exit, every refusal | fork test; with the vault's own token trait, still 99,937 shares in and 99,999 sats out | E-011, D-014 |
 | The venue trait reaches Zest with no adapter | spike on a mainnet fork | E-009 |
-| Full suite, forking the pinned block 9,194,000 with two workers | `npx vitest run`: 73 of 73 tests in 17 files, from a fresh clone in 419 s and in CI | E-016, E-022 |
+| Full suite, forking the pinned block 9,194,000 with two workers | `npx vitest run`: 77 of 77 tests in 17 files, in 431 s | E-022, E-026 |
+| v4 caps the vault's principal in each asset: refused one sat over (`u117`), room freed by withdrawals only, no deposit without a cap, set once by the deployer and never raised | 4 tests; the 42 v3 tests pass against v4 | E-026 |
 | A contract can deposit sBTC into Zest and redeem it | the probe's five transactions, fees and final balances re-read from the mainnet API; fork tests | E-002, E-004, E-022 |
 | Granite accepts a contract's sBTC as collateral | fork test | E-005 |
 | Jing accepts a contract as maker: deposit and cancel | fork test pinned at block 9,036,500, from a fresh clone and in CI | E-006, E-022 |
@@ -37,8 +38,9 @@ _Last verified: 2026-10-14 at `75bf5d8`_
 The vault is not on mainnet yet; that is M2.
 
 ## Broken or unverified
+- v3, and v4 so far, identify owners and delegates by `tx-sender`, so a contract an owner calls can act as that owner, allowlisting its own venue and allocating the owner's idle funds into it (#40). v3 is on testnet only and holds nothing of value; v4 is not deployed.
 - Jing fills: untested, since settlement needs a signed Pyth update.
 
 ## Open questions
 - Is D-017 acceptable for M1, with the testnet venue as the one stand-in? The owner confirms.
-- The AUM cap's amount (#29), and after the spike, which Granite path the second venue takes (#32). The owner decides both.
+- After the spike, which Granite path the second venue takes (#32). The owner decides.

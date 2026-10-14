@@ -107,3 +107,10 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Alternatives:** keeping the mock token, which leaves an avoidable stand-in in M1's evidence; a venue that takes its token as an argument, which the venue trait's `deposit (amount min-out recipient)` does not allow.
 **Consequences:** reproducing the run needs 20,000 sats of testnet sBTC as well as STX, and the sBTC returns to the owner at the end. The earlier mock-token run (E-018, E-019) stays in the record. Like D-004, this needs sign-off before M1 is submitted, now for one stand-in, the venue.
 **Evidence:** E-023, E-024.
+
+## D-018 · v4 caps the vault's principal in each asset; sBTC's mainnet cap is 0.01 BTC · 2026-10-14 · accepted
+**Context:** M2 takes the vault to mainnet under a per-vault AUM cap the contract enforces, so its exposure is fixed and readable on-chain (D-008). Tokens differ in units, the measure has to be one the vault can read without trusting a venue, and one source has to deploy on every network (D-014).
+**Decision:** v4 is v3 plus a cap on the vault's principal in each asset, across all owners. Principal is deposits less withdrawals: funds in a venue still count, and a withdrawal that includes yield can't take it below zero. The deployer sets each asset's cap once, never to zero, and nothing changes it afterwards; an asset without a cap can't be deposited. On mainnet, sBTC's cap is 1,000,000 sats (0.01 BTC), the owner's choice. The suites move to v4, and v3 stays unchanged in the repo as the contract deployed on testnet for M1.
+**Alternatives:** a cap written into the source, which would name each network's token and break one source per network; a cap on the vault's live holdings, which would value venue positions by the venues' own quotes; a cap the deployer can raise, which turns the limit back into a policy statement.
+**Consequences:** the deployer can enable a new asset by setting its cap, but can never raise one, so a higher cap means a new deployment after an external audit (D-008). The deployer is now a role, and the specification's trust assumptions say so.
+**Evidence:** E-026.

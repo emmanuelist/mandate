@@ -37,6 +37,7 @@ Deployed by `npm run testnet` from account 1 of `settings/Testnet.toml`, which d
 |---|---|---|---|
 | clarinet CLI | 3.24.1 | the binary contains `HIRO_API_KEY` and `x-api-key`; key support untested | `clarinet --version` and binary strings, 2026-10-13 |
 | @stacks/clarinet-sdk | 3.23.2 | runs the tests; `initial_height` under `[repl.remote_data]` pins a fork (`Clarinet-jing.toml`), and `api_url = "https://api.testnet.hiro.so"` forks testnet (`Clarinet-testnet.toml`, E-023); no API key support found | `package.json` and the SDK's wasm, 2026-10-13 |
+| clarinet-sdk vitest setup | 3.23.2 | `initBeforeEach` defaults to true, so every test starts from a fresh simulator session: state set in one test, such as a cap, is gone in the next | `getClarinetVitestsArgv()` and `vitest-helpers/src/vitest.setup.ts`, 2026-10-14 |
 | vitest-environment-clarinet | 3.0.2, the latest | the `clarinet` test environment. Sets both `transformMode` (for Vitest 3) and `viteEnvironment: "ssr"`, so Vitest 4 warns that `transformMode` is deprecated and then uses `viteEnvironment`. The warning prints in passing runs too and is harmless | its `index.js` and Vitest's `init` chunk; 18 warnings in each green CI run, 2026-10-14 |
 | vitest | 4.1.11 | full suite 117 s locally | E-007 |
 | Node | 26 | CI uses the same major | `node -v`, 2026-10-13 |

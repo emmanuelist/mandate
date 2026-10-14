@@ -54,6 +54,11 @@ The vault also verifies every venue interaction against its own token and share
 balances instead of relying on the amounts the venue reports, and rejects the
 interaction if they disagree.
 
+Version 4, the version for mainnet, adds a per-vault cap on each asset: the
+vault's principal across all owners cannot exceed it. The deployer sets each cap
+once and can never raise it, so the maximum exposure is fixed and readable
+on-chain. On mainnet the sBTC cap is 0.01 BTC.
+
 The full specification, including the order of every check, the error codes and
 the threat model, is in [docs/SPEC.md](docs/SPEC.md).
 
@@ -147,7 +152,7 @@ is required.
     npm ci
     npx vitest run
 
-The full suite comprises 73 tests in 17 files and completes in approximately 6 to 8
+The full suite comprises 77 tests in 17 files and completes in approximately 6 to 8
 minutes. It forks mainnet at block 9,194,000 (`initial_height` in `Clarinet.toml`),
 so results do not change as mainnet advances. Results are final only once the
 summary line has been printed.
@@ -221,7 +226,8 @@ To deploy an independent copy and run the same lifecycle:
 ## Repository layout
 
     contracts/
-      mandate-vault-v3.clar       The vault
+      mandate-vault-v4.clar       The vault: v3 under a per-vault AUM cap, the version for mainnet
+      mandate-vault-v3.clar       The vault as deployed on testnet for M1
       venue-trait.clar            The interface the vault requires of a venue; Zest's vault conforms as deployed
       sip-010-trait.clar          The standard token trait, included so that one source deploys on every network
       mock-venue-sbtc.clar        Stand-in yield venue holding testnet sBTC, for testnet and its fork
@@ -232,7 +238,7 @@ To deploy an independent copy and run the same lifecycle:
       mandate-vault-v2.clar       Second version, retained with its tests
       mandate-probe-mainnet.clar  The minimal probe deployed on mainnet
       *probe.clar, venue-spike.clar   Exploratory contracts behind the venue findings
-    tests/                        73 tests in 17 files, plus the Jing and testnet fork tests
+    tests/                        77 tests in 17 files, plus the Jing and testnet fork tests
     scripts/                      Testnet deployment, execution and verification; the specification check
     deployments/                  Testnet deployment records
     docs/                         Specification, plan, decisions, evidence and verified dependency facts
