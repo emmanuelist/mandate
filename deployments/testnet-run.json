@@ -1,0 +1,77 @@
+{
+  "network": "testnet",
+  "owner": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+  "delegate": "ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW",
+  "vault": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v3",
+  "steps": [
+    {
+      "label": "fund the delegate's fees: 5 STX",
+      "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+      "txid": "0x60dcb733ee55ea70120bd67481ab0a3c77b598d753f5be04d50b2bafe5c84ed6",
+      "block": 719271,
+      "result": "(ok true)"
+    },
+    {
+      "label": "owner mints 1,000,000 mock",
+      "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+      "txid": "0xa532ce0ced619547e18e01a8496939786a62db2b7f901197496138c84c85a4c9",
+      "block": 719273,
+      "result": "(ok true)"
+    },
+    {
+      "label": "owner allowlists the asset",
+      "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+      "txid": "0x40ef575835c6e73ac4f712913aacae52e08defa1a8f255fdbe4ecc10e73125f8",
+      "block": 719275,
+      "result": "(ok true)"
+    },
+    {
+      "label": "owner allowlists the venue",
+      "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+      "txid": "0xd83b57c43ab053521c762ee1cb9f71ed2b59e8de09e30a6a27a8b89dfe213132",
+      "block": 719277,
+      "result": "(ok true)"
+    },
+    {
+      "label": "owner deposits 400,000",
+      "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+      "txid": "0xcc2bd1d810ff14b4e062d73d28ea797ed2b6582c7cf3dfaa287fa66f5aa60e99",
+      "block": 719279,
+      "result": "(ok true)"
+    },
+    {
+      "label": "owner grants the delegate",
+      "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+      "txid": "0x37d9f9c90177209edecb94bc08fc62a2b0436f2d0d97a223b24eb23ffc80d5ad",
+      "block": 719281,
+      "result": "(ok true)"
+    },
+    {
+      "label": "delegate allocates 100,000",
+      "from": "ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW",
+      "txid": "0x5ec913434edac52e3931ffeff81d1dac5ce7d85d60deb35380dcbb223ffa7363",
+      "block": 719283,
+      "result": "(ok u100000)"
+    },
+    {
+      "label": "delegate unwinds 100,000",
+      "from": "ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW",
+      "txid": "0xeb6f3bb4678fd50f4616e14d15cf49391b86fd18499c38a2fdd97cd615930b68",
+      "block": 719285,
+      "result": "(ok u100000)"
+    },
+    {
+      "label": "owner withdraws 400,000",
+      "from": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+      "txid": "0xfe071e940bcd51510c8cf451b99ec2a46b8e9752cdcba546076843a1e14c1974",
+      "block": 719287,
+      "result": "(ok true)"
+    }
+  ],
+  "checks": {
+    "ownerIdleInVault": "u0",
+    "ownerPosition": "u0",
+    "ownerWallet": "(ok u1000000)",
+    "vaultTokens": "(ok u0)"
+  }
+}

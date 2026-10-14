@@ -1,0 +1,31 @@
+{
+  "network": "testnet",
+  "deployer": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5",
+  "contracts": {
+    "sip-010-trait": {
+      "id": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.sip-010-trait",
+      "txid": "0x166a1bab5b3105827474def3ee7db1635006818573490b89f7ef8781538f23ee",
+      "block": 719259
+    },
+    "venue-trait": {
+      "id": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.venue-trait",
+      "txid": "0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b",
+      "block": 719260
+    },
+    "mock-token": {
+      "id": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-token",
+      "txid": "0xa9ff4fbe791268326039434dfa0222333bf3a8717efcef0ab76db5dd463c2a6e",
+      "block": 719263
+    },
+    "mock-venue": {
+      "id": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue",
+      "txid": "0xc9de22d0954b5f53fa05c5ca1ea8451b258bd4790aad4e8929b32200ef0f6439",
+      "block": 719265
+    },
+    "mandate-vault-v3": {
+      "id": "ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v3",
+      "txid": "0x26400b07e407980984c89c9da2cf61ff469202e4c14eb97af4241e3a91700ce6",
+      "block": 719267
+    }
+  }
+}
