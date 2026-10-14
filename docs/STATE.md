@@ -1,24 +1,25 @@
 # State
-_Last verified: 2026-10-14 at `075f4f3`_
+_Last verified: 2026-10-14 at `36ed855`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M2 · Mainnet Launch + Adversarial Suite (due 2026-12-05, 52 days left). M1's exit criteria are met (E-014, E-022, E-024); D-017 awaits sign-off.
-**Next action:** the reference delegate, a small open-source agent holding only its own key (#33); the invariant tests (#31) can run alongside
-**Blocked on:** nothing for #33 or #31. The mainnet issues (#34 to #36) need the owner to fund the deployer with STX and the mandate with sBTC.
+**Next action:** the invariant tests (#31), then static checks and the findings log (#37)
+**Blocked on:** nothing for #31 or #37. The mainnet issues (#34 to #36) need the owner to fund the deployer with STX and the mandate with sBTC and about 20 USDCx.
 
 ## Works (verified this session)
 | Capability | Verified by | Evidence |
 |---|---|---|
 | A stranger can follow the README: from a fresh clone, `npm ci`, both mainnet fork suites and `npm run testnet:verify` pass with only Node on PATH. The testnet fork suite was added after that run | fresh clone of `9-readme` from GitHub; the testnet suite locally | E-022, E-023 |
-| v3, the testnet sBTC venue and both traits are deployed on testnet, each with the repo's source and Clarity version | `npm run testnet:verify`: 11 of 11 checks | E-024 |
-| One mandate end to end on testnet with testnet's official sBTC: deposit, grant, allocate, unwind, withdraw; the sBTC moves owner to vault to venue and back, and the books reconcile | 7 transactions, every one `(ok …)`; their transfer events | E-024 |
+| v4, the testnet sBTC venue and both traits are deployed on testnet, each with the repo's source and Clarity version, and testnet sBTC's cap is set | `npm run testnet:verify`: 16 of 16 checks | E-030 |
+| One mandate end to end on testnet with testnet's official sBTC, now on v4: deposit, grant, allocate, unwind, withdraw, and the books reconcile | 7 transactions, every one `(ok …)` | E-024, E-030 |
+| The reference delegate moves funds without the owner signing: two allocations and three unwinds on testnet, signed by the delegate alone in deny mode, reading its limits through `mandate-of` | testnet transactions; 6 decision tests | E-031 |
 | The vault and the testnet sBTC venue against testnet's official sBTC, on a testnet fork | 2 tests, pinned at testnet block 719,800 | E-023 |
 | `npm run testnet` rebuilds and reruns in one command, and stops rather than run against a stale deployment | reruns on the live deployment; a contract edited locally | E-019, E-024 |
 | v3: the delegate allocates and unwinds through the venue trait; every v2 limit and fix holds; the owner can always unwind | 23 tests against a deterministic venue | E-010 |
 | v3 measures every venue call and refuses a hostile venue's attacks with nothing moved | 7 hostile-venue tests | E-012 |
 | v3 against Zest's real sBTC vault, with no adapter: allocate, unwind, owner exit, every refusal | fork test; with the vault's own token trait, still 99,937 shares in and 99,999 sats out | E-011, D-014 |
 | The venue trait reaches Zest with no adapter | spike on a mainnet fork | E-009 |
-| Full suite, forking the pinned block 9,194,000 with two workers | `npx vitest run`: 127 of 127 tests in 20 files, in 483 s | E-022, E-029 |
+| Full suite, forking the pinned block 9,194,000 with two workers | `npx vitest run`: 134 of 134 tests in 21 files, in 556 s | E-022, E-031 |
 | The adversarial suite: 43 hostile-delegate cases across seven classes, each refused with the exact code, no asset events and no balance changed | `tests/v4-adversarial.test.ts`; two mutants make it fail | E-029 |
 | v4 against Granite's USDCx lending pool through `granite-venue`: allocate, unwind, owner exit, refusals, the adapter's minimum | fork test; books match real balances to the unit | E-028, D-020 |
 | v4 identifies callers by `contract-caller`: a contract an owner calls can't act as the owner, and a contract acting for itself still can | 3 tests; the same call against v3 succeeds | E-027 |

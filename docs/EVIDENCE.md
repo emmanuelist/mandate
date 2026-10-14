@@ -32,6 +32,8 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-027 | 2026-10-14 | A contract an owner calls could act as the owner against v3, and can't against v4. Against v3, one call to a contract posing as an airdrop moved the owner's 400,000 idle tokens into the attacker's venue, which never pays them back. Against v4 the same call is refused (`u100`) with nothing moved, and a contract owner acting for itself from inside `as-contract?` still deposits and withdraws. The v4 suites pass with the change, 49 tests, and the hostile venue's callback is still refused (`u105`). The full suite passes: 80 tests in 18 files | `npx vitest run tests/phishing.test.ts` (output below) | `aa27bdf` |
 | E-028 | 2026-10-14 | v4 works with Granite's USDCx lending pool through `granite-venue`, on a mainnet fork. A real USDCx holder's mandate allocates 100 USDCx for 99,799,935 shares against a quote of 99,801,116; the vault holds the adapter's shares and the adapter exactly as many Granite LP tokens. The unwind returns 99.999999 USDCx, the books match real balances to the unit, and the adapter keeps nothing. Policy refusals hold (`u102`, `u100`), the owner exits alone after revoking, and a minimum above the quote is refused by the adapter (`u301`) with nothing moved. The full suite passes: 84 tests in 19 files | `npx vitest run tests/v4-granite-fork.test.ts` and `npx vitest run` (output below) | `8282568` |
 | E-029 | 2026-10-14 | The adversarial suite: 43 hostile-delegate cases against v4, all refused with the exact code, no asset events and no balance changed, across seven classes: 8 oversized orders, 6 unlisted assets, 7 substituted venues, 6 rate-limit races, 6 expiry and revocation, 7 reaching another owner's balance and 3 withdrawing outright. Two deliberate mutants, a wrong expected code and a legal move wrapped as an attack, make it fail, so it isn't vacuous. The full suite passes: 127 tests in 20 files | `npx vitest run tests/v4-adversarial.test.ts` (output below) | `075f4f3` |
+| E-030 | 2026-10-14 | v4 is on testnet: `npm run testnet` deployed it ([block 723,619](https://explorer.hiro.so/txid/0xeb74f75cb3eb9b7e3c13fb99f9f42b28af56124028967e316c8d4d8eab6b6cda?chain=testnet)) with its source identical to the repo, skipped the four contracts already there, set testnet sBTC's cap at 1,000,000 sats, and ran the lifecycle on v4 with the books reconciling. v3 stays on testnet as M1's record | `npm run testnet` and `npm run testnet:verify` (output below) | `c82b9ac`, `36ed855` |
+| E-031 | 2026-10-14 | The reference delegate moves funds without the owner signing. Holding only its own key, it ran five rounds on testnet against a mandate the owner granted it: two allocations and three unwinds, each signed by the delegate alone in deny mode, with post-conditions fixing what the vault sends and bounding what the venue pays back, and transfer events that match. The owner's only transactions were funding the delegate's fees, the allowlists, the deposit and the grant. Six tests cover its decisions, and the full suite passes: 134 tests in 21 files | [allocate](https://explorer.hiro.so/txid/0x6ee1c8463185dd56c29d1cdfbf4a6862826992c07d98570853edc391438a0176?chain=testnet) `(ok u20000)` · [unwind](https://explorer.hiro.so/txid/0x663709b37ae8d9f3ab499e46a5fb9bf2a86b017ee8cfe6392d369403fbe6c39c?chain=testnet) `(ok u10000)` · [allocate](https://explorer.hiro.so/txid/0xe131289dc88397c1e97ef610b046b09cd46cce98a275682b50a636851900df51?chain=testnet) `(ok u20000)` · [unwind](https://explorer.hiro.so/txid/0x80a7df02f0cb17cf4ca3767f8b52f07d781d1af2d1249fa3da8551c99661e9da?chain=testnet) `(ok u20000)` · [unwind](https://explorer.hiro.so/txid/0x5d5b85d71d51dff04f903dfd446799481c1af4053c13fbbb1f8032e033ab2d38?chain=testnet) `(ok u10000)`; `npm run testnet:verify`, 16 of 16 (output below) | `b2ea7b2`, `36ed855` |
 
 ### E-001 output
 ~~~text
@@ -525,4 +527,88 @@ $ npx vitest run
  Test Files  20 passed (20)
       Tests  127 passed (127)
 exit 0 in 483 s
+~~~
+### E-030 output
+~~~text
+$ npm run testnet
+deployer ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5
+  sip-010-trait     already deployed, identical to the repo   0x166a1bab5b3105827474def3ee7db1635006818573490b89f7ef8781538f23ee
+  venue-trait       already deployed, identical to the repo   0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b
+  mandate-vault-v4  0xeb74f75cb3eb9b7e3c13fb99f9f42b28af56124028967e316c8d4d8eab6b6cda ... block 723619
+  mock-venue-sbtc   already deployed, identical to the repo   0x086d9b94b07098b68399dfabc75e5716329b8f81b7a8bbb5ef8e0de4a65497c4
+  set testnet sBTC's cap   0x3efaf54685cbccd0c4a031c15c1fb68e784ca03f9635300c5f77850cdb1f7fb7 ... (ok true), block 723620
+wrote deployments/testnet.json
+owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5
+delegate ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW
+  owner allowlists testnet sBTC  0xb4b8f90d5bdc9fefcbe1e73d6419ed45b5dc8fcd30cae27bf55df64c5ea2fa10 ... (ok true), block 723622
+  owner allowlists the venue     0x2aca0ba6218cc8d203c69bfcc43b1c5c36a2c51b6b73109036b189fcaae03740 ... (ok true), block 723625
+  owner deposits 20,000 sats     0x5098a2eddae24d8a8bc2ad06d536c9ea230f5068e9933bfbbd35b47d193706bf ... (ok true), block 723627
+  owner grants the delegate      0xd7d5d87dc429e9d7813cc8be199c2cb20735c87a0f0b2407def0656bb690985f ... (ok true), block 723630
+  delegate allocates 10,000      0x2a5ec5eecf807559ca5c3344063908dbbfc9e844c398749f531e00843dddda05 ... (ok u10000), block 723632
+  delegate unwinds 10,000        0xc2363e157b52c16435440b32b1190424596559c9f4472e5c868363c9b5bcbeeb ... (ok u10000), block 723634
+  owner withdraws 20,000 sats    0xe28bb2362926253228a9609022552bff46879792d6b61ac247fa5e9eefa5f09d ... (ok true), block 723636
+books reconcile, before: {"ownerIdleInVault":"u0","ownerPosition":"u0","ownerSbtc":"(ok u300000)","vaultSbtc":"(ok u0)","venueSbtc":"(ok u0)"} 
+                  after:  {"ownerIdleInVault":"u0","ownerPosition":"u0","ownerSbtc":"(ok u300000)","vaultSbtc":"(ok u0)","venueSbtc":"(ok u0)"}
+wrote deployments/testnet-run.json
+exit 0 · elapsed 127 s
+~~~
+
+### E-031 output
+~~~text
+$ npm run delegate:key -- testnet
+delegate ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6
+key in settings/Delegate-testnet.toml (never print it), address in deployments/testnet-delegate.json
+
+$ npm run testnet:mandate        # the owner's side, which knows only the delegate's address
+owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5
+delegate ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6
+  fund the delegate's fees: 2 STX    0x83d3d9689db4677bb4b7037dc144dd3a307592f1d171ed7861960ddfa70e48cc ... (ok true), block 723640
+  owner allowlists testnet sBTC      0xc77202494068051c5d1c8e6b42a5d4e4671c7e00ae2d302b193c4cf591f5e453 ... (ok true), block 723642
+  owner allowlists the venue         0xc2aa45cf2f9ba87e7f39180cee61c1ffe85ffde9532d452bcca12ec31fe004f6 ... (ok true), block 723643
+  owner deposits 40,000 sats         0x0c7a2acf6b867d558e4fab912693f93f64f535708cdd88f64fa3a53855ffa697 ... (ok true), block 723646
+  owner grants the delegate          0xf0f436614676bbcf9c476162aa8d1c2ef11ca128d5f38bc309b64c1e345b5754 ... (ok true), block 723648
+wrote deployments/testnet-delegate.json
+exit 0 · elapsed 62 s
+
+$ npm run delegate -- testnet 7500,2500,7500,2500,0        # the delegate, with only its own key
+delegate ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6 for owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5, vault ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v4, venue ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc
+  target  7500 bps: allocate below target: 0 of 30000 -> (ok u20000), block 723654, 0x6ee1c8463185dd56c29d1cdfbf4a6862826992c07d98570853edc391438a0176
+  target  2500 bps: unwind   above target: 20000 of 10000 -> (ok u10000), block 723658, 0x663709b37ae8d9f3ab499e46a5fb9bf2a86b017ee8cfe6392d369403fbe6c39c
+  target  7500 bps: allocate below target: 10000 of 30000 -> (ok u20000), block 723660, 0xe131289dc88397c1e97ef610b046b09cd46cce98a275682b50a636851900df51
+  target  2500 bps: unwind   above target: 30000 of 10000 -> (ok u20000), block 723662, 0x80a7df02f0cb17cf4ca3767f8b52f07d781d1af2d1249fa3da8551c99661e9da
+  target     0 bps: unwind   above target: 10000 of 0 -> (ok u10000), block 723664, 0x5d5b85d71d51dff04f903dfd446799481c1af4053c13fbbb1f8032e033ab2d38
+wrote deployments/testnet-delegate-run.json
+exit 0 · elapsed 72 s
+
+# from the testnet API
+allocate  signer the delegate | deny | (ok u20000) | post-condition: vault sends exactly 20000 sbtc-token
+          events: transfer 20000 sbtc-token vault -> venue; mint 20000 mshare -> vault
+unwind    signer the delegate | deny | (ok u10000) | post-conditions: vault sends exactly 10000 mshare; venue sends at least 9900 sbtc-token
+          events: burn 10000 mshare from vault; transfer 10000 sbtc-token venue -> vault
+(the other three rounds follow the same pattern: (ok u20000), (ok u20000), (ok u10000))
+
+$ npm run testnet:verify
+contracts deployed by ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5:
+  ok   sip-010-trait     block 719259, Clarity 4, source identical to the repo
+  ok   venue-trait       block 719260, Clarity 4, source identical to the repo
+  ok   mandate-vault-v4  block 723619, Clarity 4, source identical to the repo
+  ok   mock-venue-sbtc   block 719933, Clarity 4, source identical to the repo
+end-to-end run, owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5, delegate ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW:
+  ok   owner allowlists testnet sBTC    success, block 723622, (ok true)
+  ok   owner allowlists the venue       success, block 723625, (ok true)
+  ok   owner deposits 20,000 sats       success, block 723627, (ok true)
+  ok   owner grants the delegate        success, block 723630, (ok true)
+  ok   delegate allocates 10,000        success, block 723632, (ok u10000)
+  ok   delegate unwinds 10,000          success, block 723634, (ok u10000)
+  ok   owner withdraws 20,000 sats      success, block 723636, (ok true)
+reference delegate ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6, signing alone for owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5:
+  ok   allocate  success, block 723654, (ok u20000), signer the delegate, post-conditions deny
+  ok   unwind    success, block 723658, (ok u10000), signer the delegate, post-conditions deny
+  ok   allocate  success, block 723660, (ok u20000), signer the delegate, post-conditions deny
+  ok   unwind    success, block 723662, (ok u20000), signer the delegate, post-conditions deny
+  ok   unwind    success, block 723664, (ok u10000), signer the delegate, post-conditions deny
+all 16 checks pass
+
+$ npx vitest run tests/delegate.test.ts
+      Tests  6 passed (6)
 ~~~

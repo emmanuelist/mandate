@@ -37,11 +37,12 @@ Then say the next action back before starting work.
 ## Stack and commands
 - Clarity 4 contracts in `contracts/`; Clarinet 3.24.1, `@stacks/clarinet-sdk` 3.23.2, Vitest 4, Node 26.
 - `npm ci` once.
-- `npx vitest run` runs the full suite in about 6 to 9 minutes. Every test forks Stacks mainnet through api.hiro.so (`[repl.remote_data]` in `Clarinet.toml`). Wait for the summary line: partial output gives wrong counts.
+- `npx vitest run` runs the full suite in about 6 to 10 minutes. Every test forks Stacks mainnet through api.hiro.so (`[repl.remote_data]` in `Clarinet.toml`). Wait for the summary line: partial output gives wrong counts.
 - `npx vitest run --config vitest.jing.config.ts` runs the Jing fork, pinned at block 9,036,500 by `Clarinet-jing.toml`.
 - `npx vitest run --config vitest.testnet.config.ts` runs the testnet fork, pinned at testnet block 719,800 by `Clarinet-testnet.toml`: the vault and the testnet sBTC venue against testnet's official sBTC.
 - `npm run testnet` deploys the contracts `Clarinet-testnet.toml` lists to testnet from account 1 of `settings/Testnet.toml`, then runs one mandate end to end with testnet's official sBTC and account 2 as the delegate, and records both in `deployments/`. It skips a contract already deployed with the repo's source and stops if the source differs. A fresh account spends 7.51 testnet STX and needs 20,000 sats of testnet sBTC, which come back at the end of the run.
 - `npm run testnet:verify` re-checks `deployments/` against the chain with no keys; `npm run testnet:accounts` prints both testnet addresses and their balances.
+- The reference delegate (`scripts/delegate.mjs`) holds only its own key, in `settings/Delegate-<network>.toml` (gitignored; never print it). `npm run delegate:key -- <network>` creates it, `npm run testnet:mandate` is the owner's side on testnet, and `npm run delegate -- <network> <target-bps,...>` runs it.
 - `settings/Mainnet.toml` holds the mainnet deployer mnemonic and `settings/Testnet.toml` a testnet-only seed. Both are gitignored: never print or commit them.
 
 ## Clarity 4 notes

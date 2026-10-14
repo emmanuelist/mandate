@@ -23,14 +23,15 @@ Verified facts about what Mandate depends on, each with how and when it was chec
 | Mandate probe (ours) | `SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH.mandate-probe-mainnet` | owner-only `fund`, `allocate`, `unwind`, `rescue` | E-001, E-002 |
 
 ## Our contracts on testnet
-Deployed by `npm run testnet` from account 1 of `settings/Testnet.toml`, which deploys what `Clarinet-testnet.toml` lists, and recorded in `deployments/testnet.json`. `npm run testnet:verify` checks each one's source and Clarity version against the repo, with no keys.
+Deployed by `npm run testnet` from account 1 of `settings/Testnet.toml`, which deploys what `Clarinet-testnet.toml` lists, and recorded in `deployments/testnet.json`. The reference delegate is `ST3VZW54JDW3TQ3G2GV7X7RBG9TWH89QKQXTCGXW6`; its key is in `settings/Delegate-testnet.toml` (gitignored) and its run in `deployments/testnet-delegate-run.json`. `npm run testnet:verify` checks each one's source and Clarity version against the repo, with no keys.
 
 | Contract | Clarity | Block | Verified |
 |---|---|---|---|
 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.sip-010-trait` | 4 | 719,259 | `npm run testnet:verify`, 2026-10-14 (E-024) |
 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.venue-trait` | 4 | 719,260 | same |
-| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v3` | 4 | 719,267 | same |
+| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v3` (M1's version, no longer in the manifest) | 4 | 719,267 | E-024 |
 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc` (holds testnet sBTC) | 4 | 719,933 | same |
+| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v4`, with testnet sBTC's cap at 1,000,000 sats | 4 | 723,619 | `npm run testnet:verify`, 2026-10-14 (E-030) |
 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-token` (earlier run only) | 3 | 719,263 | E-017 |
 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue` (earlier run only) | 4 | 719,265 | E-017 |
 
@@ -66,6 +67,8 @@ Deployed by `npm run testnet` from account 1 of `settings/Testnet.toml`, which d
 - **An exceeded `as-contract?` allowance fails the call with `(err u<n>)`**, where n is the violated allowance's position in the list, so the vault's single allowance gives `(err u0)`. E-012.
 - **Clarity doesn't block re-entrancy.** A venue can call back into the vault mid-call. The call runs as the vault (inside its `as-contract?`, `tx-sender` is the vault), which owns no balances, positions or mandates, so it fails: `(err u105)` from `withdraw`. E-012, D-011.
 - **`tx-sender` passes through every contract a user calls.** A contract an owner calls runs with the owner as `tx-sender`, so authorizing by `tx-sender` lets it act as the owner. v3 was open to this (E-027); v4 authorizes by `contract-caller` (D-019).
+- **Burns count as sends for post-conditions.** In deny mode a burn of a principal's tokens needs a post-condition, just as a transfer does; mints need none. The reference delegate's unwinds carry `vault sent_equal_to <shares>` of the venue's share token, and pass. Testnet, 2026-10-14 (E-031).
+- **Clarinet SDK 3.23.2 doesn't evaluate post-conditions**, so they can only be checked on a real network; 3.24.0's release notes add post-conditions in simnet. 2026-10-14.
 - **`try!` needs a known error type.** A function that only ever returns `(ok ...)`, such as `allow-asset`, has an indeterminate error type, so `try!` on a call to it fails type-checking; use `unwrap-panic`. `contracts/phisher-v4.clar`, 2026-10-14.
 - **A contract that doesn't type-check stops the simulator from starting**, and vitest reports only `Failed to start forks worker`, the same message a rate-limited fork gives. After a contract change, run `clarinet check` before blaming the network. 2026-10-14.
 - **`as-contract?`'s body can't end in a response.** Put `try!` inside the body. `contracts/c4probe.clar`.
