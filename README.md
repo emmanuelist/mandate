@@ -54,12 +54,20 @@ The vault also verifies every venue interaction against its own token and share
 balances instead of relying on the amounts the venue reports, and rejects the
 interaction if they disagree.
 
-Version 4, the version for mainnet, adds a per-vault cap on each asset: the
-vault's principal across all owners cannot exceed it. The deployer sets each cap
-once and can never raise it, so the maximum exposure is fixed and readable
-on-chain. On mainnet the caps are 0.01 BTC of sBTC and 1,000 USDCx. Version 4 also identifies owners
-and delegates by the principal that calls it directly, so a contract an owner
-interacts with cannot act in the owner's name.
+Version 4 added a per-vault cap on each asset: the vault's principal across all
+owners cannot exceed it. The deployer sets each cap once and can never raise it, so
+the maximum exposure is fixed and readable on-chain. On mainnet the caps are
+0.01 BTC of sBTC and 1,000 USDCx. Version 4 also identifies owners and delegates by
+the principal that calls it directly, so a contract an owner interacts with cannot
+act in the owner's name.
+
+Version 5, the version for mainnet, closes the vault while it calls a venue: until
+the call returns, every function that changes the vault's state is refused. The
+structured review found that version 4 lacked this protection. A venue listed by
+its own owner could deposit its own tokens into the vault while paying out a
+withdrawal from the venue, and the vault credited those tokens twice, to the venue
+and to the owner, at the expense of other owners (#48). Version 4 was only ever
+deployed on testnet.
 
 The full specification, including the order of every check, the error codes and
 the threat model, is in [docs/SPEC.md](docs/SPEC.md).
@@ -92,8 +100,9 @@ Version 4 of the vault is deployed on Stacks testnet and operates on testnet's
 official sBTC. Zest is not available on testnet, so the yield venue is the one
 stand-in: a mock venue that implements the same venue trait as Zest's vault and
 holds testnet sBTC. The vault's integration with Zest's and Granite's deployed
-contracts is tested separately on a mainnet fork (`tests/v4-zest-fork.test.ts`,
-`tests/v4-granite-fork.test.ts`).
+contracts is tested separately on a mainnet fork (`tests/v5-zest-fork.test.ts`,
+`tests/v5-granite-fork.test.ts`). Version 5 replaces version 4 and will be deployed
+on testnet as a rehearsal before mainnet (#34).
 
 | Contract | Address | Deployed |
 | --- | --- | --- |
@@ -157,7 +166,7 @@ API. Neither an API key nor the Clarinet CLI is required.
     npm ci
     npm test
 
-`npm test` runs two suites. The local suites, 95 tests in 6 files, touch only local
+`npm test` runs two suites. The local suites, 119 tests in 7 files, touch only local
 contracts and run in seconds without a network
 (`npx vitest run --config vitest.local.config.ts`). The fork suite, 41 tests in 16
 files, runs against a fork of Stacks mainnet at block 9,194,000 (`initial_height` in
@@ -240,7 +249,8 @@ To deploy an independent copy and run the same lifecycle:
 ## Repository layout
 
     contracts/
-      mandate-vault-v4.clar       The vault: v3 under a per-vault AUM cap, on testnet and for mainnet
+      mandate-vault-v5.clar       The vault: v4 closed to calls back in while a venue runs, for mainnet
+      mandate-vault-v4.clar       The vault as deployed on testnet for M2's runs: v3 under a per-vault AUM cap
       mandate-vault-v3.clar       The vault as deployed on testnet for M1
       venue-trait.clar            The interface the vault requires of a venue; Zest's vault conforms as deployed
       granite-venue.clar          Adapter for Granite's USDCx lending pool, the second venue
@@ -249,11 +259,12 @@ To deploy an independent copy and run the same lifecycle:
       mock-token.clar             Stand-in for sBTC in the tests and the earlier testnet run
       mock-venue.clar             Stand-in yield venue in the tests and the earlier testnet run
       hostile-venue.clar          An adversarial venue used in the tests
+      reentrant-venue*.clar       Venues that call back into the vault mid-call, used in the tests
       mandate-vault.clar          First version, retained with its tests
       mandate-vault-v2.clar       Second version, retained with its tests
       mandate-probe-mainnet.clar  The minimal probe deployed on mainnet
       *probe.clar, venue-spike.clar   Exploratory contracts behind the venue findings
-    tests/                        136 tests in 22 files, 95 local and 41 on a mainnet fork, plus the Jing and testnet fork tests
+    tests/                        160 tests in 23 files, 119 local and 41 on a mainnet fork, plus the Jing and testnet fork tests
     scripts/                      Testnet deployment, execution and verification; the reference delegate; the specification check
     deployments/                  Testnet deployment records
     docs/                         Specification, plan, decisions, evidence and verified dependency facts

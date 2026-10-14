@@ -1,6 +1,6 @@
 # Mandate protocol specification
 
-Covers `contracts/mandate-vault-v4.clar` and `contracts/venue-trait.clar`. v4 is v3 with a per-vault AUM cap (section 2). v3 stays deployed on testnet as M1's record, and the testnet fork suite runs it there until v4 goes to testnet (#33). Every limit here is enforced by the contract; nothing depends on an off-chain service. `node scripts/spec-crosscheck.mjs` fails if a test in the vault's suites isn't named in this document, and CI runs it.
+Covers `contracts/mandate-vault-v5.clar` and `contracts/venue-trait.clar`. v5 is v4 closed to calls back in while a venue runs (section 3), and v4 is v3 with a per-vault AUM cap (section 2). v4 stays deployed on testnet, unchanged, as the record of M2's testnet runs, and v3 as M1's. Every limit here is enforced by the contract; nothing depends on an off-chain service. `node scripts/spec-crosscheck.mjs` fails if a test in the vault's suites isn't named in this document, and CI runs it.
 
 ## 1. Roles and assets
 
@@ -64,9 +64,15 @@ Windows and days roll forward on the first call after they lapse. **`grant` rese
 
 Every function identifies the owner or the delegate by `contract-caller`, the principal that called the vault directly, never by `tx-sender`. A contract an owner calls is itself the caller, so it acts only on its own books: it can't edit the owner's lists, grant in the owner's name or allocate the owner's funds. A contract acting for itself, such as a multisig owner, calls from inside `as-contract?`. Inside the vault's own `as-contract?` bodies, `tx-sender` is the vault. v3 used `tx-sender`, which let any contract an owner called act as the owner (#40).
 
+### While a venue runs
+
+A venue runs code the vault doesn't control, and Clarity lets that code call back into the vault mid-call, into any public function except the one already running, which Clarity's runtime aborts as a circular reference. A venue runs code at every point the vault calls it: its quotes, its balance reads (a public `get-balance` satisfies the trait), `deposit` and `redeem`. So while `allocate`, `unwind` or `owner-unwind` runs, from its first check to its last write, the vault is closed: every function that writes refuses with `u120`, whoever calls it. An error anywhere undoes the whole call, the flag included, so it can't stay set.
+
+v4 had no such rule. A venue paying out an unwind could deposit its own tokens into the vault as itself: the deposit credited the venue, and the unwind measured the same tokens as the payout and credited them to the owner as well, so an owner who listed their own venue could take other owners' funds (#48, group I).
+
 ### `allocate`, in order
 
-Identity and policy are answered before state, so an exhausted mandate reports its policy error even when the balance is also short.
+Identity and policy are answered before state, so an exhausted mandate reports its policy error even when the balance is also short. Before any of it, the vault must be open (`u120`), and it stays closed until `allocate` returns.
 
 1. A mandate exists for (owner, caller), else `u100`.
 2. The asset is on the owner's list, else `u106`.
@@ -86,7 +92,7 @@ Identity and policy are answered before state, so an exhausted mandate reports i
 
 ### `unwind` and `owner-unwind`
 
-`unwind` checks the mandate (`u100`), expiry (`u103`), the rate window (`u110`) and the position (`u113`), then takes a quote (`convert-to-assets`, `u109`) and sets the floor from `max-slip-bps`. It doesn't touch the per-move or daily caps, since unwinding reduces exposure.
+Both refuse while the vault is closed (`u120`), and close it until they return. `unwind` checks the mandate (`u100`), expiry (`u103`), the rate window (`u110`) and the position (`u113`), then takes a quote (`convert-to-assets`, `u109`) and sets the floor from `max-slip-bps`. It doesn't touch the per-move or daily caps, since unwinding reduces exposure.
 
 Both then exit the position the same way: the position must exist and hold the asset given (`u113`, `u106`), and the shares must be between 1 and the position (`u113`). The position is debited, the balances are read, and the venue's `redeem` is called under an allowance of exactly those shares. Exactly those shares must have been burned (`u114`), the assets received must be at least what the venue reported (`u114`) and at least the minimum (`u108`), and the owner's idle balance is credited with what actually arrived.
 
@@ -115,6 +121,8 @@ Both then exit the position the same way: the position must exist and hold the a
 | `u117` | the deposit would take the vault's principal in the asset past its cap, or the asset has no cap |
 | `u118` | only the deployer sets caps |
 | `u119` | the asset's cap is already set, and can't change |
+| `u120` | the vault is closed: the call came in while `allocate`, `unwind` or `owner-unwind` was running |
+| `u128` | an asset the call gave no `as-contract?` allowance for left the vault during it (Clarity's own code) |
 
 A venue's own errors pass through unchanged, such as a venue refusing a deposit below its minimum.
 
@@ -125,6 +133,7 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 - A Clarity contract can't change after deployment. The vault has no pause or upgrade path, and its deployer's only power is setting each asset's cap once.
 - The Granite adapter holds every owner's Granite LP tokens, so its code is trusted that far; the cap bounds what it can hold.
 - An owner chooses their venues. A venue answers for its own share ledger (`get-balance`), so a venue on an owner's list is trusted that far, and no further.
+- A venue's code runs inside the vault's calls and can call back in. While it runs, the vault refuses every call that writes (section 3).
 - Time is Bitcoin block height.
 
 ### Attacks and the checks that stop them
@@ -133,89 +142,100 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 
 | Attack or failure | Stopped by | Test |
 |---|---|---|
-| A caller with no mandate from this owner tries to move the owner's funds | `allocate`: no mandate for (owner, caller), `u100` | "refuses a caller with no mandate" (v4.test.ts) |
-| One oversized allocation | `allocate`: amount above `max-notional`, `u102` | "refuses a move above the per-move cap" (v4.test.ts) |
-| A delegate acting after the mandate ran out | `allocate`, `unwind`: burn height at or past `expires`, `u103` | "refuses once the mandate has expired" (v4.test.ts) |
-| Allocating an asset the owner never approved | `allocate`: asset not on the owner's list, `u106` | "refuses an asset the owner hasn't allowlisted" (v4.test.ts) |
-| Allocating into a venue the delegate controls | `allocate`: venue not on the owner's list, `u107` | "refuses a venue the owner hasn't allowlisted" (v4.test.ts) |
-| Pairing an approved venue with an asset it wasn't approved for | `allocate`: venue listed for another asset, `u107` | "refuses a venue allowlisted for a different asset" (v4.test.ts) |
-| Churning: many moves that burn fees without changing the position | `allocate`, `unwind`: window count at `max-trades-per-window`, `u110` | "refuses when the rate window is exhausted" (v4.test.ts) |
-| Slow-drip churn under the per-move cap | `allocate`: day's total would pass `max-daily-notional`, `u111` | "refuses a move that would exceed the day's notional" (v4.test.ts) |
-| Moving more than the owner has idle | `allocate`: idle balance below the amount, `u105` | "refuses a move larger than the owner's idle balance" (v4.test.ts) |
-| Probing state through policy errors | `allocate` answers identity and policy before balances: an exhausted mandate reports `u110`, not `u105` | "answers policy before state: the rate limit beats an empty balance" (v4.test.ts) |
-| Accepting a bad price on the owner's behalf | `allocate`: the floor comes from the venue's own quote, not the caller; a venue enforcing it refuses, and the vault checks shares against it, `u108` | "refuses a fill worse than the mandate's slippage, and nothing moves" (v4.test.ts); "testnet sBTC: a fill below the slippage floor is refused, and nothing moves" (sbtc-testnet.fork.ts) |
-| Grinding the position down through many small bad fills | `allocate`, `unwind`: summed shortfall past `max-cum-slip-bps`, `u112` | "stops repeated small bleeds with the cumulative budget" (v4.test.ts) |
-| A stranger grants an owner's delegate a mandate to reach that owner's funds | mandates are keyed by (owner, delegate); `allocate` reads only the named owner's mandate, `u102` here | "a stranger can't redirect another owner's delegate" (v4.test.ts) |
-| The delegate pulling funds out | `withdraw` pays only the caller's own idle balance; the delegate has none, `u105` | "the delegate can't withdraw" (v4.test.ts) |
+| A caller with no mandate from this owner tries to move the owner's funds | `allocate`: no mandate for (owner, caller), `u100` | "refuses a caller with no mandate" (v5.test.ts) |
+| One oversized allocation | `allocate`: amount above `max-notional`, `u102` | "refuses a move above the per-move cap" (v5.test.ts) |
+| A delegate acting after the mandate ran out | `allocate`, `unwind`: burn height at or past `expires`, `u103` | "refuses once the mandate has expired" (v5.test.ts) |
+| Allocating an asset the owner never approved | `allocate`: asset not on the owner's list, `u106` | "refuses an asset the owner hasn't allowlisted" (v5.test.ts) |
+| Allocating into a venue the delegate controls | `allocate`: venue not on the owner's list, `u107` | "refuses a venue the owner hasn't allowlisted" (v5.test.ts) |
+| Pairing an approved venue with an asset it wasn't approved for | `allocate`: venue listed for another asset, `u107` | "refuses a venue allowlisted for a different asset" (v5.test.ts) |
+| Churning: many moves that burn fees without changing the position | `allocate`, `unwind`: window count at `max-trades-per-window`, `u110` | "refuses when the rate window is exhausted" (v5.test.ts) |
+| Slow-drip churn under the per-move cap | `allocate`: day's total would pass `max-daily-notional`, `u111` | "refuses a move that would exceed the day's notional" (v5.test.ts) |
+| Moving more than the owner has idle | `allocate`: idle balance below the amount, `u105` | "refuses a move larger than the owner's idle balance" (v5.test.ts) |
+| Probing state through policy errors | `allocate` answers identity and policy before balances: an exhausted mandate reports `u110`, not `u105` | "answers policy before state: the rate limit beats an empty balance" (v5.test.ts) |
+| Accepting a bad price on the owner's behalf | `allocate`: the floor comes from the venue's own quote, not the caller; a venue enforcing it refuses, and the vault checks shares against it, `u108` | "refuses a fill worse than the mandate's slippage, and nothing moves" (v5.test.ts); "testnet sBTC: a fill below the slippage floor is refused, and nothing moves" (sbtc-testnet.fork.ts) |
+| Grinding the position down through many small bad fills | `allocate`, `unwind`: summed shortfall past `max-cum-slip-bps`, `u112` | "stops repeated small bleeds with the cumulative budget" (v5.test.ts) |
+| A stranger grants an owner's delegate a mandate to reach that owner's funds | mandates are keyed by (owner, delegate); `allocate` reads only the named owner's mandate, `u102` here | "a stranger can't redirect another owner's delegate" (v5.test.ts) |
+| The delegate pulling funds out | `withdraw` pays only the caller's own idle balance; the delegate has none, `u105` | "the delegate can't withdraw" (v5.test.ts) |
 
 **B. Funds stranded**
 
 | Attack or failure | Stopped by | Test |
 |---|---|---|
-| Revoking a delegate locks funds in a venue | `owner-unwind` and `withdraw` need no mandate; the revoked delegate gets `u100` | "revoking can't strand funds: the owner unwinds and withdraws without a mandate" (v4.test.ts) |
-| An expired mandate locks funds in a venue | `owner-unwind` needs no mandate; the expired delegate gets `u103` | "expiry can't strand funds either" (v4.test.ts) |
-| Removing a venue from the list locks the position in it | `allocate` checks the list (`u107`); `unwind` checks only the position | "disallowing a venue stops new allocations but not unwinding" (v4.test.ts) |
-| The same, against Zest's real sBTC vault | `owner-unwind`, `withdraw` | "the owner exits Zest without a mandate after revoking, then withdraws" (v4-zest-fork.test.ts) |
-| The same after expiry, against Zest | `owner-unwind` | "the owner exits Zest after the mandate expires" (v4-zest-fork.test.ts) |
+| Revoking a delegate locks funds in a venue | `owner-unwind` and `withdraw` need no mandate; the revoked delegate gets `u100` | "revoking can't strand funds: the owner unwinds and withdraws without a mandate" (v5.test.ts) |
+| An expired mandate locks funds in a venue | `owner-unwind` needs no mandate; the expired delegate gets `u103` | "expiry can't strand funds either" (v5.test.ts) |
+| Removing a venue from the list locks the position in it | `allocate` checks the list (`u107`); `unwind` checks only the position | "disallowing a venue stops new allocations but not unwinding" (v5.test.ts) |
+| The same, against Zest's real sBTC vault | `owner-unwind`, `withdraw` | "the owner exits Zest without a mandate after revoking, then withdraws" (v5-zest-fork.test.ts) |
+| The same after expiry, against Zest | `owner-unwind` | "the owner exits Zest after the mandate expires" (v5-zest-fork.test.ts) |
 
 **C. Owners' books mixing**
 
 | Attack or failure | Stopped by | Test |
 |---|---|---|
-| An owner withdrawing someone else's deposit | idle balances are kept per (owner, token), `u105` | "one owner can't withdraw another owner's deposit" (v4.test.ts) |
-| A stranger writing an owner's allowlist | lists are keyed by owner and only the caller's own can be edited; `u106` here | "allowlists are per owner: mallory's entries don't reach alice's mandate" (v4.test.ts) |
-| Re-declaring a venue's asset so a position unwinds into the wrong asset | `allocate`: an open position's asset must match, `u107` | "a position keeps the asset it was opened with" (v4.test.ts) |
-| Unwinding shares that belong to other owners | `unwind`, `owner-unwind`: shares above the position, `u113` | "the delegate can't unwind more than the position" (v4.test.ts) |
-| Crediting an unwind in the wrong asset | exit checks the asset against the position, `u106` | "unwinding with an asset other than the position's is refused" (v4.test.ts) |
-| An owner unwinding someone else's position | positions are keyed by (owner, venue), `u113` | "the owner can't unwind another owner's position" (v4.test.ts) |
+| An owner withdrawing someone else's deposit | idle balances are kept per (owner, token), `u105` | "one owner can't withdraw another owner's deposit" (v5.test.ts) |
+| A stranger writing an owner's allowlist | lists are keyed by owner and only the caller's own can be edited; `u106` here | "allowlists are per owner: mallory's entries don't reach alice's mandate" (v5.test.ts) |
+| Re-declaring a venue's asset so a position unwinds into the wrong asset | `allocate`: an open position's asset must match, `u107` | "a position keeps the asset it was opened with" (v5.test.ts) |
+| Unwinding shares that belong to other owners | `unwind`, `owner-unwind`: shares above the position, `u113` | "the delegate can't unwind more than the position" (v5.test.ts) |
+| Crediting an unwind in the wrong asset | exit checks the asset against the position, `u106` | "unwinding with an asset other than the position's is refused" (v5.test.ts) |
+| An owner unwinding someone else's position | positions are keyed by (owner, venue), `u113` | "the owner can't unwind another owner's position" (v5.test.ts) |
 
 **D. A hostile venue**
 
 | Attack or failure | Stopped by | Test |
 |---|---|---|
-| A venue pulls more than the move from the vault | the `as-contract?` allowance is exactly the move; the call fails with `(err u0)` | "takes more than the move: stopped by the allowance, nothing moves" (v4-hostile.test.ts) |
-| A venue reports more shares than it delivered | balances are read before and after; reported above received, `u114` | "reports more shares than it mints: refused" (v4-hostile.test.ts) |
-| A venue calls back into the vault during a deposit | the callback's caller is the venue, which owns no balances, positions or mandates; it fails, `u105` here | "calls back into the vault mid-call: refused" (v4-hostile.test.ts) |
-| A callback running as the vault acts on a mandate granted to the vault | `grant` refuses the vault as a delegate, `u115`; under the caller rule a callback can't act as the vault anyway | "the vault can't be granted as its own delegate, so a callback can't act on a mandate" (v4-hostile.test.ts) |
-| A venue reports more assets than it paid | balances are read before and after; reported above received, `u114` | "pays less than it reports on redeem: refused, for the delegate and the owner" (v4-hostile.test.ts) |
-| A venue burns more of the vault's shares than asked, eating another owner's position | the allowance is exactly the shares asked; `(err u0)`; the burn is also measured, `u114` | "burns more shares than asked: refused, and another owner's shares are safe" (v4-hostile.test.ts) |
+| A venue pulls more than the move from the vault | the `as-contract?` allowance is exactly the move; the call fails with `(err u0)` | "takes more than the move: stopped by the allowance, nothing moves" (v5-hostile.test.ts) |
+| A venue reports more shares than it delivered | balances are read before and after; reported above received, `u114` | "reports more shares than it mints: refused" (v5-hostile.test.ts) |
+| A venue calls back into the vault during a deposit | the vault is closed while a venue runs, `u120` | "calls back into the vault mid-call: refused" (v5-hostile.test.ts) |
+| A callback running as the vault acts on a mandate granted to the vault | `grant` refuses the vault as a delegate, `u115`; under the caller rule a callback can't act as the vault anyway | "the vault can't be granted as its own delegate, so a callback can't act on a mandate" (v5-hostile.test.ts) |
+| A venue reports more assets than it paid | balances are read before and after; reported above received, `u114` | "pays less than it reports on redeem: refused, for the delegate and the owner" (v5-hostile.test.ts) |
+| A venue burns more of the vault's shares than asked, eating another owner's position | the allowance is exactly the shares asked; `(err u0)`; the burn is also measured, `u114` | "burns more shares than asked: refused, and another owner's shares are safe" (v5-hostile.test.ts) |
 
 **E. Real venues: Zest and Granite**
 
 | Attack or failure | Stopped by | Test |
 |---|---|---|
-| Any of group A against Zest's real sBTC vault | the same checks, which run before the venue is called | "policy refusals hold with Zest as the venue, and nothing leaves the vault" (v4-zest-fork.test.ts) |
-| Using Zest when the owner hasn't listed it, or listed it for another asset, or acting without a mandate | `u107`, `u107`, `u100` | "refuses Zest unless the owner allowlisted it, for sBTC" (v4-zest-fork.test.ts) |
+| Any of group A against Zest's real sBTC vault | the same checks, which run before the venue is called | "policy refusals hold with Zest as the venue, and nothing leaves the vault" (v5-zest-fork.test.ts) |
+| Using Zest when the owner hasn't listed it, or listed it for another asset, or acting without a mandate | `u107`, `u107`, `u100` | "refuses Zest unless the owner allowlisted it, for sBTC" (v5-zest-fork.test.ts) |
 
-| Any of group A against Granite's pool, through the adapter | the same checks, which run before the venue is called | "Granite: policy refusals hold through the adapter, and nothing leaves the vault" (v4-granite-fork.test.ts) |
-| Revoking a delegate strands funds in Granite | `owner-unwind` and `withdraw` need no mandate; the revoked delegate gets `u100` | "Granite: the owner exits without a mandate after revoking, then withdraws" (v4-granite-fork.test.ts) |
-| A fill below the minimum, at a pool that takes none | the adapter checks the LP tokens that arrived against the minimum, `u301`, and the vault checks shares against its floor | "Granite: the adapter enforces the minimum Granite doesn't take, and nothing moves" (v4-granite-fork.test.ts) |
+| Any of group A against Granite's pool, through the adapter | the same checks, which run before the venue is called | "Granite: policy refusals hold through the adapter, and nothing leaves the vault" (v5-granite-fork.test.ts) |
+| Revoking a delegate strands funds in Granite | `owner-unwind` and `withdraw` need no mandate; the revoked delegate gets `u100` | "Granite: the owner exits without a mandate after revoking, then withdraws" (v5-granite-fork.test.ts) |
+| A fill below the minimum, at a pool that takes none | the adapter checks the LP tokens that arrived against the minimum, `u301`, and the vault checks shares against its floor | "Granite: the adapter enforces the minimum Granite doesn't take, and nothing moves" (v5-granite-fork.test.ts) |
 
 **F. Bad mandate parameters**
 
 | Attack or failure | Stopped by | Test |
 |---|---|---|
-| A zero-length window that restarts on every call, switching the rate limit off | `grant`, `u116` | "grant refuses a zero-length rate window, which would switch the rate limit off" (v4.test.ts) |
-| Per-move slippage above 100%, which would make the floor negative and abort `allocate` | `grant`, `u116` | "grant refuses per-move slippage above 100%" (v4.test.ts) |
-| A slippage budget above 100% | `grant`, `u116` | "grant refuses a slippage budget above 100%" (v4.test.ts) |
-| A refused grant overwriting a working mandate | the checks run before anything is written | "a refused grant leaves the existing mandate in force" (v4.test.ts) |
-| The guards refusing valid edge values | a one-block window and 100% slippage are accepted | "grant accepts the boundaries: a one-block window and 100% slippage" (v4.test.ts) |
+| A zero-length window that restarts on every call, switching the rate limit off | `grant`, `u116` | "grant refuses a zero-length rate window, which would switch the rate limit off" (v5.test.ts) |
+| Per-move slippage above 100%, which would make the floor negative and abort `allocate` | `grant`, `u116` | "grant refuses per-move slippage above 100%" (v5.test.ts) |
+| A slippage budget above 100% | `grant`, `u116` | "grant refuses a slippage budget above 100%" (v5.test.ts) |
+| A refused grant overwriting a working mandate | the checks run before anything is written | "a refused grant leaves the existing mandate in force" (v5.test.ts) |
+| The guards refusing valid edge values | a one-block window and 100% slippage are accepted | "grant accepts the boundaries: a one-block window and 100% slippage" (v5.test.ts) |
 
 **G. Exposure beyond the pilot's cap**
 
 | Attack or failure | Stopped by | Test |
 |---|---|---|
-| More owner funds in the vault than the pilot allows | `deposit`: the vault's principal plus the amount past the asset's cap, `u117` | "the cap: deposits up to it succeed across owners, and one sat over is refused with nothing moved" (v4.test.ts) |
-| Making room for more deposits by parking funds in a venue | principal counts funds in venues; only withdrawals free room | "the cap: a withdrawal frees room under it, and moving funds into a venue does not" (v4.test.ts) |
-| Depositing an asset nobody capped | no cap means no room, `u117` | "the cap: an asset without a cap can't be deposited" (v4.test.ts) |
-| Raising the cap, or a stranger setting one | `set-cap`: the deployer only (`u118`), once (`u119`), never zero (`u116`) | "the cap: only the deployer sets it, once, and it can be neither zero nor raised" (v4.test.ts) |
+| More owner funds in the vault than the pilot allows | `deposit`: the vault's principal plus the amount past the asset's cap, `u117` | "the cap: deposits up to it succeed across owners, and one sat over is refused with nothing moved" (v5.test.ts) |
+| Making room for more deposits by parking funds in a venue | principal counts funds in venues; only withdrawals free room | "the cap: a withdrawal frees room under it, and moving funds into a venue does not" (v5.test.ts) |
+| Depositing an asset nobody capped | no cap means no room, `u117` | "the cap: an asset without a cap can't be deposited" (v5.test.ts) |
+| Raising the cap, or a stranger setting one | `set-cap`: the deployer only (`u118`), once (`u119`), never zero (`u116`) | "the cap: only the deployer sets it, once, and it can be neither zero nor raised" (v5.test.ts) |
 
 **H. A contract the owner calls, acting as the owner**
 
 | Attack or failure | Stopped by | Test |
 |---|---|---|
-| A contract posing as an airdrop allowlists its own venue, grants the owner a mandate and allocates the owner's funds into that venue, all in one call | v3 identified callers by `tx-sender` and allowed it; v4 identifies them by `contract-caller`, so the contract acts only on its own books and its allocation finds no mandate, `u100` | "v3: a contract the owner calls moves the owner's idle funds into its own venue" (phishing.test.ts); "v4: the same call is refused, and nothing moves" (phishing.test.ts) |
-| The caller rule shutting out an owner that is a contract | a contract acting for itself calls from inside `as-contract?` | "v4: a contract acting for itself, from inside as-contract?, deposits and withdraws" (phishing.test.ts) |
+| A contract posing as an airdrop allowlists its own venue, grants the owner a mandate and allocates the owner's funds into that venue, all in one call | v3 identified callers by `tx-sender` and allowed it; v4 and v5 identify them by `contract-caller`, so the contract acts only on its own books and its allocation finds no mandate, `u100` | "v3: a contract the owner calls moves the owner's idle funds into its own venue" (phishing.test.ts); "v5: the same call is refused, and nothing moves" (phishing.test.ts) |
+| The caller rule shutting out an owner that is a contract | a contract acting for itself calls from inside `as-contract?` | "v5: a contract acting for itself, from inside as-contract?, deposits and withdraws" (phishing.test.ts) |
+
+**I. A venue calling back into the vault**
+
+| Attack or failure | Stopped by | Test |
+|---|---|---|
+| A venue on an owner's own list deposits its own tokens while paying out that owner's unwind: the deposit is credited to the venue, the payout and the same tokens to the owner, and other owners' funds cover both | v4 allowed it. v5 is closed while a venue runs, `u120` | "v4: a venue that deposits while paying out the owner's unwind is credited twice, and another owner can't withdraw" (reentry.test.ts); "v5: a deposit while paying out the owner's unwind is refused, and nothing moves" (reentry.test.ts) |
+| The same through the delegate's unwind | `u120` | "v4: the same through the delegate's unwind" (reentry.test.ts); "v5: the same through the delegate's unwind is refused, and nothing moves" (reentry.test.ts) |
+| The same from a public balance read after the redeem, outside the venue's `redeem` | the vault is closed for the whole call, reads included; the venue passes the refusal on as a failed read, `u109` | "v4: the same from a public balance read after the redeem" (reentry.test.ts); "v5: the same from a public balance read fails, and nothing moves" (reentry.test.ts) |
+| A venue that swallows the refusal and carries on | nothing it tried took effect; the unwind completes and the books are exact | "v5: a venue that ignores the refusal in its redeem carries on honestly, and the books still match" (reentry.test.ts); "v5: a venue that ignores the refusal at its balance read carries on honestly, and the books still match" (reentry.test.ts) |
+| The flag staying set and shutting the vault | it clears when the call returns, and an error undoes it | "v5: a refused call leaves the vault open for the next call in the same transaction" (reentry.test.ts) |
+| Every other call back, from each point a venue runs code | the adversarial suite's re-entry class | |
 
 ### Residual risks: not stopped by the contract
 
@@ -239,7 +259,9 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 
 ## Adversarial suite
 
-`tests/v4-adversarial.test.ts` attempts 43 attacks a hostile delegate, or the people around it, could make. Each case asserts the exact refusal, that the call emitted no asset events, and that no balance anywhere changed: the vault's, each venue's, every owner's wallet, idle balance and position, and the delegate's. Two deliberate mutants, a wrong expected code and a legal move wrapped as an attack, make it fail (E-029).
+`tests/v5-adversarial.test.ts` attempts 58 attacks a hostile delegate, or the people around it, could make, a venue that calls back into the vault among them. Each case asserts the exact refusal, that the call emitted no asset events, and that no balance anywhere changed: the vault's, each venue's, every owner's wallet, idle balance and position, the delegate's, and the calling-back venue's idle balance and shares. Two deliberate mutants, a wrong expected code and a legal move wrapped as an attack, make it fail (E-029), and so does v5 without its closed-vault check: all 13 of the re-entry cases it refuses fail (E-035).
+
+In the re-entry class, `contracts/reentrant-venue.clar`, a venue alice listed, makes one call into the vault, as itself, from its `deposit`, its `redeem`, the balance read after either, or one of its quotes. Its getter and quotes are public functions, which the venue trait allows. A refusal the venue passes on from a read or a quote reaches the caller as the vault's failed-read code, `u109`. A call back into the very function that is running never reaches the vault: Clarity's runtime aborts the whole transaction as a circular reference, and the case asserts that abort and that nothing moved.
 
 | Class | Case | Refused with |
 |---|---|---|
@@ -286,28 +308,43 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 | withdrawing outright | "withdrawing: the delegate calls withdraw" | `u105` |
 | withdrawing outright | "withdrawing: the delegate pulls the vault's tokens through the token contract" | the token's own `u4` |
 | withdrawing outright | "withdrawing: the delegate withdraws what it just unwound" | `u105` |
+| re-entry | "re-entry: a venue deposits its own tokens while paying out the delegate's unwind" | `u120` |
+| re-entry | "re-entry: a venue deposits its own tokens while paying out the owner's unwind" | `u120` |
+| re-entry | "re-entry: a venue withdraws an idle balance of its own while paying out an unwind" | `u120` |
+| re-entry | "re-entry: a venue unwinds an owner's position elsewhere while paying out the owner's unwind" | `u120` |
+| re-entry | "re-entry: a venue exits a position of its own elsewhere while paying out an unwind" | `u120` |
+| re-entry | "re-entry: a venue grants a mandate while paying out an unwind" | `u120` |
+| re-entry | "re-entry: a venue deposits its own tokens while taking an allocation" | `u120` |
+| re-entry | "re-entry: a venue allocates an owner's funds elsewhere while paying out an unwind" | `u120` |
+| re-entry | "re-entry: a venue lists a venue for itself while taking an allocation" | `u120` |
+| re-entry | "re-entry: a venue deposits from the balance read after an unwind" | `u109` |
+| re-entry | "re-entry: a venue deposits from the balance read after an allocation" | `u109` |
+| re-entry | "re-entry: a venue deposits from its share quote, before an allocation" | `u109` |
+| re-entry | "re-entry: a venue deposits from its asset quote, before an unwind" | `u109` |
+| re-entry | "re-entry: a venue calls allocate from inside allocate, which Clarity aborts, and nothing moves" | Clarity aborts the transaction |
+| re-entry | "re-entry: a venue calls unwind from inside unwind, which Clarity aborts, and nothing moves" | Clarity aborts the transaction |
 
 ## Invariants
 
-`tests/v4-invariants.test.ts` drives two owners and two delegates through 400 random steps per seed: deposits and withdrawals of two tokens, grants with random limits, revokes, allocations and unwinds (many refused), owner unwinds, venue haircuts, Bitcoin blocks passing, and full exits. After every step it checks that
+`tests/v5-invariants.test.ts` drives two owners and two delegates through 400 random steps per seed: deposits and withdrawals of two tokens, grants with random limits, revokes, allocations and unwinds (many refused) at two venues, owner unwinds, venue haircuts, Bitcoin blocks passing, and full exits. One venue, `reentrant-venue`, is re-armed at random to call back into the vault once, with a deposit or a withdrawal of its own, from its `deposit`, its `redeem`, the balance read after either, or one of its quotes; it ignores a refusal and carries on honestly. After every step the walk checks that
 
-1. the vault's balance of each token equals the sum of the owners' idle balances. Only a direct transfer to the vault, which no step makes, could raise the balance above the books;
-2. the vault's shares in the venue equal the sum of the owners' positions;
+1. the vault's balance of each token equals the idle balances it records, summed over every account that could hold one, the calling-back venue included. A double credit shows up here: the venue's deposit is recorded twice, so the books exceed the vault's balance. Only a direct transfer to the vault, which no step makes, could raise the balance above the books;
+2. the vault's shares in each venue equal the sum of the owners' positions there;
 3. no delegate's token balance ever grows.
 
-At random points, and for every owner at the end, an owner exits completely, unwinding every position and withdrawing every idle balance; each exit succeeds, and at the end the vault holds no tokens and no shares. So a run can't pass by exercising nothing, the fixed seed must reach 15 successful allocations and 15 unwinds and exits, and a random seed 5 and 15: over 61 random seeds, allocations ranged from 12 to 49 and unwinds and exits never fell below 31. One seed is fixed for CI; another is random and printed, and `INVARIANT_SEED` replays it. A token sent to the vault mid-walk, which the books don't record, fails the check at that step (E-033).
+At random points, and for every owner at the end, an owner exits completely, unwinding every position and withdrawing every idle balance; each exit succeeds, and at the end the vault holds no tokens and no shares. Every call back the venue attempted must have been refused. So a run can't pass by exercising nothing, the fixed seed must reach 15 successful allocations, 15 unwinds and exits and 5 call backs, and a random seed 5, 15 and 1: over 60 random seeds, allocations ranged from 10 to 41, unwinds and exits from 21 up, and call backs from 3 to 12, every one refused. One seed is fixed for CI; another is random and printed, and `INVARIANT_SEED` replays it. A token sent to the vault mid-walk, which the books don't record, fails the check at that step (E-033). `INVARIANT_VAULT=mandate-vault-v4` walks v4 with the venue aimed at it, and every seed tried fails: most at the step where an unwind is credited twice (E-035).
 
-- "invariants: 400 random steps across two owners and two delegates, fixed seed" (v4-invariants.test.ts)
-- "invariants: 400 random steps, from a random seed printed for replay" (v4-invariants.test.ts)
+- "invariants: 400 random steps across two owners and two delegates, fixed seed" (v5-invariants.test.ts)
+- "invariants: 400 random steps, from a random seed printed for replay" (v5-invariants.test.ts)
 
 ## Lifecycle tests
 
 These show the vault working rather than refusing an attack.
 
-- "allocates idle assets into the venue, unwinds them, and the owner withdraws everything" (v4.test.ts)
-- "control: the same venue behaving honestly passes every check" (v4-hostile.test.ts)
-- "deposit, allocate, unwind, withdraw: every sat accounted for" (v4-zest-fork.test.ts)
-- "a zero-slippage mandate still allocates, because Zest fills at its quote" (v4-zest-fork.test.ts)
-- "Granite: deposit, allocate, unwind, withdraw: every unit accounted for" (v4-granite-fork.test.ts)
-- "mandate-of: anyone can read the limits an owner granted, and none once revoked" (v4.test.ts)
+- "allocates idle assets into the venue, unwinds them, and the owner withdraws everything" (v5.test.ts)
+- "control: the same venue behaving honestly passes every check" (v5-hostile.test.ts)
+- "deposit, allocate, unwind, withdraw: every sat accounted for" (v5-zest-fork.test.ts)
+- "a zero-slippage mandate still allocates, because Zest fills at its quote" (v5-zest-fork.test.ts)
+- "Granite: deposit, allocate, unwind, withdraw: every unit accounted for" (v5-granite-fork.test.ts)
+- "mandate-of: anyone can read the limits an owner granted, and none once revoked" (v5.test.ts)
 - "testnet sBTC: deposit, allocate, unwind, withdraw, every sat accounted for" (sbtc-testnet.fork.ts)

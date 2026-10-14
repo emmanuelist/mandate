@@ -37,6 +37,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-032 | 2026-10-14 | The suites that touch only local contracts run without a fork. On `Clarinet-local.toml`, 93 tests in 5 files pass in about 3 s and send nothing to Hiro; where they used sBTC only as an asset nobody listed, a second local token stands in. The fork suite keeps 41 tests in 16 files. Before the change, CI runs hit Hiro's rate limit 12 to 24 times each | `npx vitest run --config vitest.local.config.ts`, seven runs, and `npx vitest run` (output below) | `b14618a` |
 | E-033 | 2026-10-14 | Invariants hold over random sequences. Two owners and two delegates take 400 random steps per seed across two tokens and every action. After every step the vault's tokens match the owners' idle balances, its venue shares match their positions, and no delegate's tokens grow, and every owner can always exit completely. The fixed seed reaches 26 successful allocations, 14 unwinds, 12 owner unwinds and 24 exits; three random seeds reached 25 to 49 allocations. On CI's runners a walk takes up to 10 s, past Vitest's 5 s default, and one random seed (1280284992) reached only 12, so each walk has a 60 s timeout, and over 61 seeds allocations ranged from 12 to 49 and unwinds and exits from 31: the fixed seed must reach 15 of each, a random seed 5 allocations and 15 unwinds and exits. A token sent to the vault at step 200, which the books don't record, fails the check at that step. The local suites pass: 95 tests in 6 files | `npx vitest run --config vitest.local.config.ts` (output below) | `68be905` |
 | E-034 | 2026-10-14 | After #45, the local suites wait on Hiro's rate limit zero times, and the fork suite's own waits did not fall. Before the change, `main` waited 12 times (630 s), all in the fork suite. After it, the pull request's run waited 14 times (645 s) in the fork suite and once (37 s) in the Jing suite, and `main`'s run waited 11 times (586 s), all in the fork suite. A fresh clone's `npm ci && npm test` passed: 93 of 93 local and 41 of 41 fork tests, exit 0 in 523 s | runs [38552641786](https://github.com/emmanuelist/mandate/actions/runs/38552641786), [38575611800](https://github.com/emmanuelist/mandate/actions/runs/38575611800) and [38577444982](https://github.com/emmanuelist/mandate/actions/runs/38577444982); waits counted from each run's log lines `Rate limited, retrying after N seconds` | `96d956e` |
+| E-035 | 2026-10-14 | The structured review found that v4 credits a venue's call back twice (#48), and v5 closes the vault while a venue runs (D-022). On v4, an owner who lists a venue of their own takes another owner's deposit through the owner's unwind, the delegate's unwind, and a public balance read after the redeem: each time mallory's side puts in 500,000 and takes out 999,999, and alice's withdrawal of her 500,000 fails with the vault holding 1. On v5 each attempt is refused with nothing moved, with `u120`, or `u109` where the venue passes the refusal on from a read, and a venue that ignores the refusal leaves the books exact. The adversarial suite's 15 re-entry cases pass, two of them Clarity's own abort of a call back into the running function. v5 without its check fails 21 tests, among them all 13 adversarial re-entry cases it refuses. The invariant walk, with one venue calling back at random, holds on v5 over the fixed seed and 73 random seeds and refuses every call back; on v4 every one of 8 seeds fails, 5 of them at the step where an unwind is credited twice. All three manifests check with no errors. Local suites: 119 of 119 in 7 files. Fork suite on v5: 41 of 41 in 16 files | `npx vitest run --config vitest.local.config.ts`; `INVARIANT_VAULT=mandate-vault-v4 INVARIANT_SEED=<n>` on the walk; a mutant; `npx vitest run`; `clarinet check` (output below) | `13a3fda` |
 
 ### E-001 output
 ~~~text
@@ -662,4 +663,66 @@ $ npx vitest run --config vitest.local.config.ts
  Test Files  6 passed (6)
       Tests  95 passed (95)
 in 6 s
+~~~
+
+### E-035 output
+~~~text
+# the probe that found it, on v4, before any fix (simnet, local contracts): alice holds
+# 500,000 idle; mallory deposits 1, lists her own venue, grants herself a mandate and
+# allocates the 1; her venue holds 499,999 of its own and deposits it while paying out
+$ npx vitest run --config vitest.local.config.ts tests/reentry.test.ts --silent=false --reporter=verbose
+  v4, the owner's unwind        : (ok u500000) | books {"alice":"u500000","mallory":"u500000","venue":"u499999","position":"u0","vault":"(ok u1000000)"} | withdrawals {"mallory":"(ok true)","venue":"(ok true)","alice":"(err u1)"} | vault holds (ok u1)
+  v4, the delegate's unwind     : (ok u500000) | books {... the same ...} | withdrawals {"mallory":"(ok true)","venue":"(ok true)","alice":"(err u1)"} | vault holds (ok u1)
+  v4, the balance read          : (ok u500000) | books {... the same ...} | withdrawals {"mallory":"(ok true)","venue":"(ok true)","alice":"(err u1)"} | vault holds (ok u1)
+  v5, the owner's unwind        : (err u120) | books {"alice":"u500000","mallory":"u0","venue":"u0","position":"u1","vault":"(ok u500000)"}
+  v5, the delegate's unwind     : (err u120) | books {... unchanged ...}
+  v5, the balance read          : (err u109) | books {... unchanged ...}
+  v5, ignored at redeem       : (ok u1) | books {"alice":"u500000","mallory":"u1","venue":"u0","position":"u0","vault":"(ok u500001)"} | venue's tally { attempts: u1, refusals: u1 }
+  v5, ignored at balance read : (ok u1) | books {... the same ...} | venue's tally { attempts: u1, refusals: u1 }
+  v5, refused then deposit  : (ok true) | idle u50000
+      Tests  9 passed (9)
+
+# a call back into the function already running never reaches the vault
+Error: RuntimeCheck(CircularReference(["ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.mandate-vault-v5:allocate"]))
+
+$ npx vitest run --config vitest.local.config.ts tests/v5-adversarial.test.ts
+      Tests  58 passed (58)
+
+# the walk on v4: INVARIANT_VAULT=mandate-vault-v4 INVARIANT_SEED=<n>, random-seed walk
+seed 1: step 308 (exit): vault's mock-token vs the idle balances it records: expected +0 to be 85244
+seed 2: step 41 (unwind): vault's mock-token vs the idle balances it records: expected 254644 to be 344793
+seed 3: step 103 (exit): vault's mock-token vs the idle balances it records: expected 170001 to be 191070
+seed 4: step 310: owner-unwind of all 42169 shares in reentrant-venue-v4: (err u128)
+seed 5: step 173 (owner-unwind): vault's mock-token vs the idle balances it records: expected 294827 to be 330106
+seed 6: call-backs refused: expected 4 to be 6
+seed 7: call-backs refused: expected 2 to be 4
+seed 8: step 111 (exit): vault's mock-token vs the idle balances it records: expected 23036 to be 70084
+# seed 4: the venue withdrew mid-redeem, and v4's redeem allows only the venue's shares
+
+# the walk on v5
+  seed 20261014           : allocate ok 39, allocate refused 48, call-backs attempted 10, call-backs refused 10, deposit ok 76, exit done 21, ...
+# seeds 1 to 12 and 1280284992 pass, 4 to 13 call backs each, every one refused; 60 more
+# seeds (7919n + 13): all pass, allocations 10 to 41, unwinds and exits 21 up, call backs
+# 3 to 12, every one refused
+
+# a throwaway mutant of v5 whose check-open never refuses
+$ npx vitest run --config vitest.local.config.ts tests/reentry.test.ts tests/v5-adversarial.test.ts tests/v5-hostile.test.ts tests/v5-invariants.test.ts
+ Test Files  4 failed (4)
+      Tests  21 failed | 55 passed (76)
+# failing: the hostile venue's call back, 5 v5 cases in reentry.test.ts, 13 adversarial
+# re-entry cases, and both walks; passing: Clarity's two aborts, the v4 cases, and the
+# same-transaction case
+
+$ clarinet check -m Clarinet.toml; -m Clarinet-local.toml; -m Clarinet-testnet.toml
+✔ 24 contracts checked; ✔ 15 contracts checked; ✔ 4 contracts checked (no errors)
+
+$ npx vitest run --config vitest.local.config.ts
+ Test Files  7 passed (7)
+      Tests  119 passed (119)
+in 11 s
+
+$ npx vitest run
+ Test Files  16 passed (16)
+      Tests  41 passed (41)
+in 464 s
 ~~~
