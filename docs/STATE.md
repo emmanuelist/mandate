@@ -36,13 +36,14 @@ _Last verified: 2026-10-14 at `36ed855`_
 ## Deployed
 | What | Network | Address | Last checked |
 |---|---|---|---|
-| mandate-vault-v3, mock-venue-sbtc, sip-010-trait, venue-trait; mock-token and mock-venue from the earlier run | Stacks testnet | all under `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5` (`docs/CONTEXT.md`) | 2026-10-14, `npm run testnet:verify` |
+| mandate-vault-v4, mock-venue-sbtc, sip-010-trait, venue-trait; v3, mock-token and mock-venue from M1's runs | Stacks testnet | all under `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5` (`docs/CONTEXT.md`) | 2026-10-14, `npm run testnet:verify` |
 | mandate-probe-mainnet | Stacks mainnet | `SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH.mandate-probe-mainnet` | 2026-10-14 |
 
 The vault is not on mainnet yet; that is M2.
 
 ## Broken or unverified
-- v3, on testnet, identifies callers by `tx-sender`, so a contract an owner calls can act as that owner (E-027). It holds nothing of value, and v4, which fixes this (D-019), replaces it on testnet in #33.
+- v3 stays on testnet as M1's record and still identifies callers by `tx-sender` (E-027). Nothing uses it now that v4 runs there (E-030).
+- CI's retries recovered three `main` runs in a row, as rate-limit waits grew to 24 a run (#45).
 - Jing fills: untested, since settlement needs a signed Pyth update.
 
 ## Open questions
