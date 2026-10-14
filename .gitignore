@@ -1,6 +1,7 @@
 # Secrets — never commit
 **/settings/Mainnet.toml
 **/settings/Testnet.toml
+**/settings/Delegate*.toml
 
 # Private working notes stay out of the public record
 internal/

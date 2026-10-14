@@ -1,7 +1,7 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
 
-// mandate-vault-v3 and the testnet sBTC venue against testnet's official sBTC, on
+// mandate-vault-v4 and the testnet sBTC venue against testnet's official sBTC, on
 // a testnet fork pinned at block 719800 (Clarinet-testnet.toml). The same pairing
 // runs on testnet itself (#26).
 const SBTC_ADDR = "SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1";
@@ -10,7 +10,7 @@ const SBTC = `${SBTC_ADDR}.sbtc-token`;
 
 const dep = simnet.deployer;
 const agentX = simnet.getAccounts().get("wallet_3")!;
-const V = "mandate-vault-v3";
+const V = "mandate-vault-v4";
 const VAULT = `${dep}.${V}`;
 const VENUE = `${dep}.mock-venue-sbtc`;
 const AMT = 100_000;
@@ -25,6 +25,7 @@ const idle = () => num(pp(simnet.callReadOnlyFn(V, "balance-of", [Cl.principal(O
 const position = () => num(pp(simnet.callReadOnlyFn(V, "shares-of", [Cl.principal(OWNER), Cl.principal(VENUE)], dep).result));
 
 function setup() {
+  simnet.callPublicFn(V, "set-cap", [Cl.principal(SBTC), Cl.uint(1_000_000)], dep);
   expect(simnet.callPublicFn(V, "allow-asset", [Cl.principal(SBTC)], OWNER).result).toBeOk(Cl.bool(true));
   expect(simnet.callPublicFn(V, "allow-venue", [Cl.principal(VENUE), Cl.principal(SBTC)], OWNER).result).toBeOk(Cl.bool(true));
   expect(simnet.callPublicFn(V, "deposit", [sbtc(), Cl.uint(AMT)], OWNER).result).toBeOk(Cl.bool(true));

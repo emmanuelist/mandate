@@ -1,8 +1,10 @@
 // Re-checks the testnet records against the chain, with no keys, so anyone with a
 // clone can run it: each contract in deployments/testnet.json against the repo's
 // source and Clarity version, and each step in deployments/testnet-run.json for its
-// sender, block and result (#7). After a testnet reset these fail until
-// `npm run testnet` rebuilds the records.
+// sender, block and result (#7), and each of the reference delegate's transactions
+// in deployments/testnet-delegate-run.json for its signer, result and deny-mode
+// post-conditions (#33). After a testnet reset these fail until `npm run testnet`
+// and the delegate's run rebuild the records.
 import fs from "node:fs";
 import { API, clarityVersionOf } from "./testnet-accounts.mjs";
 
@@ -27,6 +29,17 @@ for (const s of run.steps) {
   const result = t?.tx_result?.repr;
   report(t?.tx_status === "success" && t.sender_address === s.from && t.block_height === s.block && result === s.result,
     `${s.label.padEnd(32)} ${t ? `${t.tx_status}, block ${t.block_height}, ${result}` : "not found"}`);
+}
+
+if (fs.existsSync("deployments/testnet-delegate-run.json")) {
+  const dr = JSON.parse(fs.readFileSync("deployments/testnet-delegate-run.json", "utf8"));
+  console.log(`reference delegate ${dr.delegate}, signing alone for owner ${dr.owner}:`);
+  for (const r of dr.rounds.filter((x) => x.txid)) {
+    const t = await get(`/extended/v1/tx/${r.txid}`);
+    const result = t?.tx_result?.repr;
+    report(t?.tx_status === "success" && t.sender_address === dr.delegate && t.post_condition_mode === "deny" && result === r.result,
+      `${(t?.contract_call?.function_name ?? "?").padEnd(9)} ${t ? `${t.tx_status}, block ${t.block_height}, ${result}, signer ${t.sender_address === dr.delegate ? "the delegate" : t.sender_address}, post-conditions ${t.post_condition_mode}` : "not found"}`);
+  }
 }
 
 console.log(failed ? `${failed} of ${checks} checks failed` : `all ${checks} checks pass`);
