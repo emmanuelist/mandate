@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 // @ts-ignore: a plain ES module, without type declarations
-import { decide } from "../scripts/delegate.mjs";
+import { attemptOf, decide } from "../scripts/delegate.mjs";
 
 // The reference delegate's decisions (#33): what it does from what it can read.
 const mandate = { maxNotional: 20_000n, expires: 1_000n, maxSlipBps: 100n, maxTrades: 10n, windowLen: 144n, maxDaily: 200_000n };
@@ -29,5 +29,27 @@ describe("the reference delegate's decisions", () => {
   it("delegate: never allocates past what is left of the day's notional", () => {
     expect(decide(s({ counters: { ...counters, dayNotional: 195_000n } }), 7500)).toMatchObject({ action: "allocate", amount: 5_000n });
     expect(decide(s({ counters: { ...counters, dayNotional: 200_000n } }), 7500).action).toBe("hold");
+  });
+});
+
+// The calls the delegate makes for the record of refusals (#36): each one the
+// mandate forbids, with the code the vault must refuse it with.
+const cfg = { venue: "ST1.venue", asset: "ST1.token", unlistedVenue: "ST1.other-venue" };
+describe("the delegate's out-of-policy attempts", () => {
+  it("attempt: one over the per-move cap, refused with u102", () => {
+    expect(attemptOf("over-cap", s(), cfg)).toMatchObject({ fn: "allocate", venue: "ST1.venue", amount: 20_001n, expect: 102 });
+  });
+  it("attempt: a venue the owner never listed, refused with u107", () => {
+    expect(attemptOf("unlisted-venue", s(), cfg)).toMatchObject({ fn: "allocate", venue: "ST1.other-venue", amount: 1n, expect: 107 });
+    expect(() => attemptOf("unlisted-venue", s(), { ...cfg, unlistedVenue: undefined })).toThrow(/unlistedVenue/);
+  });
+  it("attempt: a withdrawal, refused with u105", () => {
+    expect(attemptOf("withdraw", s(), cfg)).toMatchObject({ fn: "withdraw", amount: 1n, expect: 105 });
+  });
+  it("attempt: a move after the owner revokes, refused with u100, and only once the mandate is gone", () => {
+    expect(attemptOf("revoked", s({ mandate: null }), cfg)).toMatchObject({ fn: "allocate", amount: 1n, expect: 100 });
+    expect(() => attemptOf("revoked", s(), cfg)).toThrow(/revoke the mandate first/);
+    expect(() => attemptOf("over-cap", s({ mandate: null }), cfg)).toThrow(/live mandate/);
+    expect(() => attemptOf("sideways", s(), cfg)).toThrow(/unknown attempt/);
   });
 });
