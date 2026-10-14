@@ -60,6 +60,10 @@ Windows and days roll forward on the first call after they lapse. **`grant` rese
 | `unwind (owner venue asset shares)` | delegate | yes | brings shares back to idle |
 | `owner-unwind (venue asset shares min-out)` | owner | no | brings the owner's own shares back to idle |
 
+### Who the caller is
+
+Every function identifies the owner or the delegate by `contract-caller`, the principal that called the vault directly, never by `tx-sender`. A contract an owner calls is itself the caller, so it acts only on its own books: it can't edit the owner's lists, grant in the owner's name or allocate the owner's funds. A contract acting for itself, such as a multisig owner, calls from inside `as-contract?`. Inside the vault's own `as-contract?` bodies, `tx-sender` is the vault. v3 used `tx-sender`, which let any contract an owner called act as the owner (#40).
+
 ### `allocate`, in order
 
 Identity and policy are answered before state, so an exhausted mandate reports its policy error even when the balance is also short.
@@ -170,8 +174,8 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 |---|---|---|
 | A venue pulls more than the move from the vault | the `as-contract?` allowance is exactly the move; the call fails with `(err u0)` | "takes more than the move: stopped by the allowance, nothing moves" (v4-hostile.test.ts) |
 | A venue reports more shares than it delivered | balances are read before and after; reported above received, `u114` | "reports more shares than it mints: refused" (v4-hostile.test.ts) |
-| A venue calls back into the vault during a deposit | the callback runs as the vault, which owns no balances, positions or mandates; it fails, `u105` here | "calls back into the vault mid-call: refused" (v4-hostile.test.ts) |
-| A callback running as the vault acts on a mandate granted to the vault | `grant` refuses the vault as a delegate, `u115` | "the vault can't be granted as its own delegate, so a callback can't act on a mandate" (v4-hostile.test.ts) |
+| A venue calls back into the vault during a deposit | the callback's caller is the venue, which owns no balances, positions or mandates; it fails, `u105` here | "calls back into the vault mid-call: refused" (v4-hostile.test.ts) |
+| A callback running as the vault acts on a mandate granted to the vault | `grant` refuses the vault as a delegate, `u115`; under the caller rule a callback can't act as the vault anyway | "the vault can't be granted as its own delegate, so a callback can't act on a mandate" (v4-hostile.test.ts) |
 | A venue reports more assets than it paid | balances are read before and after; reported above received, `u114` | "pays less than it reports on redeem: refused, for the delegate and the owner" (v4-hostile.test.ts) |
 | A venue burns more of the vault's shares than asked, eating another owner's position | the allowance is exactly the shares asked; `(err u0)`; the burn is also measured, `u114` | "burns more shares than asked: refused, and another owner's shares are safe" (v4-hostile.test.ts) |
 
@@ -200,6 +204,13 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 | Making room for more deposits by parking funds in a venue | principal counts funds in venues; only withdrawals free room | "the cap: a withdrawal frees room under it, and moving funds into a venue does not" (v4.test.ts) |
 | Depositing an asset nobody capped | no cap means no room, `u117` | "the cap: an asset without a cap can't be deposited" (v4.test.ts) |
 | Raising the cap, or a stranger setting one | `set-cap`: the deployer only (`u118`), once (`u119`), never zero (`u116`) | "the cap: only the deployer sets it, once, and it can be neither zero nor raised" (v4.test.ts) |
+
+**H. A contract the owner calls, acting as the owner**
+
+| Attack or failure | Stopped by | Test |
+|---|---|---|
+| A contract posing as an airdrop allowlists its own venue, grants the owner a mandate and allocates the owner's funds into that venue, all in one call | v3 identified callers by `tx-sender` and allowed it; v4 identifies them by `contract-caller`, so the contract acts only on its own books and its allocation finds no mandate, `u100` | "v3: a contract the owner calls moves the owner's idle funds into its own venue" (phishing.test.ts); "v4: the same call is refused, and nothing moves" (phishing.test.ts) |
+| The caller rule shutting out an owner that is a contract | a contract acting for itself calls from inside `as-contract?` | "v4: a contract acting for itself, from inside as-contract?, deposits and withdraws" (phishing.test.ts) |
 
 ### Residual risks: not stopped by the contract
 

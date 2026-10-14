@@ -126,6 +126,26 @@ path = "contracts/mandate-vault-v4.clar"
 epoch = "latest"
 clarity_version = 4
 
+[contracts.phish-venue]
+path = "contracts/phish-venue.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.phisher-v3]
+path = "contracts/phisher-v3.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.phisher-v4]
+path = "contracts/phisher-v4.clar"
+epoch = "latest"
+clarity_version = 4
+
+[contracts.self-owner]
+path = "contracts/self-owner.clar"
+epoch = "latest"
+clarity_version = 4
+
 [contracts.hostile-venue]
 path = "contracts/hostile-venue.clar"
 epoch = "latest"

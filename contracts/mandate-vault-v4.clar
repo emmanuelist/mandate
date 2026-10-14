@@ -8,6 +8,13 @@
 ;; deposits less withdrawals: funds in a venue are still under management, and
 ;; withdrawals that include yield free no more room than they took.
 ;;
+;; Callers are identified by contract-caller, the principal that called the
+;; vault directly, never by tx-sender. tx-sender passes through every contract an
+;; owner calls, so in v3 such a contract could act as the owner: allowlist its own
+;; venue, grant the owner a mandate and allocate the owner's funds into it (#40).
+;; Here a contract the owner calls acts only on its own books. A contract acting
+;; for itself, such as a multisig owner, calls from inside as-contract?.
+;;
 ;; v3's notes follow.
 ;;
 ;; Carries every fix and limit from v2 (its header, and docs/EVIDENCE.md E-007).
@@ -118,16 +125,16 @@
 
 ;; an owner may only ever edit their own allowlists
 (define-public (allow-asset (token principal))
-  (begin (map-set allowed-asset { owner: tx-sender, token: token } { ok: true }) (ok true)))
+  (begin (map-set allowed-asset { owner: contract-caller, token: token } { ok: true }) (ok true)))
 (define-public (disallow-asset (token principal))
-  (begin (map-delete allowed-asset { owner: tx-sender, token: token }) (ok true)))
+  (begin (map-delete allowed-asset { owner: contract-caller, token: token }) (ok true)))
 (define-public (allow-venue (v principal) (asset principal))
-  (begin (map-set allowed-venue { owner: tx-sender, venue: v } { asset: asset }) (ok true)))
+  (begin (map-set allowed-venue { owner: contract-caller, venue: v } { asset: asset }) (ok true)))
 (define-public (disallow-venue (v principal))
-  (begin (map-delete allowed-venue { owner: tx-sender, venue: v }) (ok true)))
+  (begin (map-delete allowed-venue { owner: contract-caller, venue: v }) (ok true)))
 
 (define-public (deposit (token <ft>) (amount uint))
-  (let ((owner tx-sender)
+  (let ((owner contract-caller)
         (tok (contract-of token))
         (held (aum-of (contract-of token))))
     (asserts! (asset-ok owner tok) ERR_ASSET)
@@ -151,22 +158,22 @@
     (asserts! (> window-len u0) ERR_PARAMS)
     (asserts! (<= max-slip-bps BPS) ERR_PARAMS)
     (asserts! (<= max-cum-slip-bps BPS) ERR_PARAMS)
-    (map-set mandates { owner: tx-sender, agent: agent }
+    (map-set mandates { owner: contract-caller, agent: agent }
       { max-notional: max-notional, expires: expires, max-slip-bps: max-slip-bps,
         max-trades-per-window: max-trades-per-window, window-len: window-len,
         max-daily-notional: max-daily-notional, max-cum-slip-bps: max-cum-slip-bps })
-    (map-set counters { owner: tx-sender, agent: agent }
+    (map-set counters { owner: contract-caller, agent: agent }
       { window-start: burn-block-height, window-count: u0,
         day-start: burn-block-height, day-notional: u0, cum-slip-bps: u0 })
     (ok true)))
 
 (define-public (revoke (agent principal))
-  (begin (map-delete mandates { owner: tx-sender, agent: agent }) (ok true)))
+  (begin (map-delete mandates { owner: contract-caller, agent: agent }) (ok true)))
 
 ;; withdrawal depends only on the ledger, never on a mandate
 (define-public (withdraw (token <ft>) (amount uint))
-  (let ((owner tx-sender) (tok (contract-of token))
-        (bal (balance-of tx-sender (contract-of token))))
+  (let ((owner contract-caller) (tok (contract-of token))
+        (bal (balance-of contract-caller (contract-of token))))
     (asserts! (>= bal amount) ERR_BALANCE)
     (map-set balances { owner: owner, token: tok } { amount: (- bal amount) })
     ;; withdrawing frees room under the cap; yield can't take principal below zero
@@ -176,8 +183,8 @@
 
 ;; the delegate moves idle assets into an allowlisted venue
 (define-public (allocate (owner principal) (v <venue>) (asset <ft>) (amount uint))
-  (let ((m   (unwrap! (map-get? mandates { owner: owner, agent: tx-sender }) ERR_NO_MANDATE))
-        (c   (counters-of owner tx-sender))
+  (let ((m   (unwrap! (map-get? mandates { owner: owner, agent: contract-caller }) ERR_NO_MANDATE))
+        (c   (counters-of owner contract-caller))
         (vn  (contract-of v))
         (at  (contract-of asset))
         (bal (balance-of owner at))
@@ -229,7 +236,7 @@
                   (cum  (get cum-slip-bps c)))
               ;; cumulative execution bleed -- oracle-free stand-in for drawdown
               (asserts! (<= (+ cum slip) (get max-cum-slip-bps m)) ERR_LOSS_BUDGET)
-              (map-set counters { owner: owner, agent: tx-sender }
+              (map-set counters { owner: owner, agent: contract-caller }
                 { window-start: win-start, window-count: (+ win-count u1),
                   day-start: day-start, day-notional: (+ day-notl amount),
                   cum-slip-bps: (+ cum slip) })
@@ -267,8 +274,8 @@
 
 ;; the delegate brings a position back to idle, inside the mandate
 (define-public (unwind (owner principal) (v <venue>) (asset <ft>) (shares uint))
-  (let ((m (unwrap! (map-get? mandates { owner: owner, agent: tx-sender }) ERR_NO_MANDATE))
-        (c (counters-of owner tx-sender))
+  (let ((m (unwrap! (map-get? mandates { owner: owner, agent: contract-caller }) ERR_NO_MANDATE))
+        (c (counters-of owner contract-caller))
         (h burn-block-height))
     (asserts! (< h (get expires m)) ERR_EXPIRED)
     (let ((win-live  (< h (+ (get window-start c) (get window-len m))))
@@ -283,11 +290,11 @@
               (slip (if (>= got quoted) u0 (/ (* (- quoted got) BPS) quoted)))
               (cum  (get cum-slip-bps c)))
           (asserts! (<= (+ cum slip) (get max-cum-slip-bps m)) ERR_LOSS_BUDGET)
-          (map-set counters { owner: owner, agent: tx-sender }
+          (map-set counters { owner: owner, agent: contract-caller }
             (merge c { window-start: win-start, window-count: (+ win-count u1),
                        cum-slip-bps: (+ cum slip) }))
           (ok got))))))
 
 ;; the owner can always bring a position home: no mandate, no rate limit
 (define-public (owner-unwind (v <venue>) (asset <ft>) (shares uint) (min-out uint))
-  (exit-position tx-sender v asset shares min-out))
+  (exit-position contract-caller v asset shares min-out))
