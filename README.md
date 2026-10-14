@@ -25,7 +25,7 @@ confined to their managers' own balance sheets.
 
 | Network | Deployment | Evidence |
 | --- | --- | --- |
-| Stacks testnet | The complete vault, with a mock sBTC token and a mock yield venue. One mandate executed end to end. | E-017 to E-019 |
+| Stacks testnet | The complete vault on testnet's official sBTC, with a mock yield venue. One mandate executed end to end. | E-023, E-024 |
 | Stacks mainnet, forked | The vault tested against Zest's deployed sBTC vault. The full test suite runs in continuous integration. | E-011, E-021 |
 | Stacks mainnet | A minimal probe contract that deposited sBTC into Zest and withdrew it. | E-001, E-002 |
 
@@ -81,34 +81,37 @@ on a decentralized exchange.
 
 ### Testnet
 
-The complete vault is deployed on Stacks testnet. Zest is not available on testnet,
-so the deployment uses a mock yield venue that implements the same venue trait as
-Zest's vault, together with a mock token in place of sBTC. The vault's integration
-with Zest's deployed contract is tested separately on a mainnet fork
-(`tests/v3-zest-fork.test.ts`).
+The complete vault is deployed on Stacks testnet and operates on testnet's official
+sBTC. Zest is not available on testnet, so the yield venue is the one stand-in: a
+mock venue that implements the same venue trait as Zest's vault and holds testnet
+sBTC. The vault's integration with Zest's deployed contract is tested separately on
+a mainnet fork (`tests/v3-zest-fork.test.ts`).
 
 | Contract | Address | Deployed |
 | --- | --- | --- |
 | Vault | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v3` | [block 719,267](https://explorer.hiro.so/txid/0x26400b07e407980984c89c9da2cf61ff469202e4c14eb97af4241e3a91700ce6?chain=testnet) |
-| Mock sBTC | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-token` | [block 719,263](https://explorer.hiro.so/txid/0xa9ff4fbe791268326039434dfa0222333bf3a8717efcef0ab76db5dd463c2a6e?chain=testnet) |
-| Mock venue | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue` | [block 719,265](https://explorer.hiro.so/txid/0xc9de22d0954b5f53fa05c5ca1ea8451b258bd4790aad4e8929b32200ef0f6439?chain=testnet) |
+| Mock venue for testnet sBTC | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc` | [block 719,933](https://explorer.hiro.so/txid/0x086d9b94b07098b68399dfabc75e5716329b8f81b7a8bbb5ef8e0de4a65497c4?chain=testnet) |
 | Token trait | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.sip-010-trait` | [block 719,259](https://explorer.hiro.so/txid/0x166a1bab5b3105827474def3ee7db1635006818573490b89f7ef8781538f23ee?chain=testnet) |
 | Venue trait | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.venue-trait` | [block 719,260](https://explorer.hiro.so/txid/0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b?chain=testnet) |
+| sBTC, testnet's official deployment | `SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token` | [block 1,162](https://explorer.hiro.so/txid/0x158530a55b6d96a611dd0389a34410986632ca698330542cbc3fe810a3c39aa0?chain=testnet) |
 
-The end-to-end run of one mandate, one transaction per step, as recorded in
-`deployments/testnet-run.json`:
+The end-to-end run of one mandate with testnet sBTC, one transaction per step, as
+recorded in `deployments/testnet-run.json`:
 
 | Step | Result | Transaction |
 | --- | --- | --- |
-| Owner deposits 400,000 | `(ok true)` | [block 719,376](https://explorer.hiro.so/txid/0x1b7330937d2c0d4dfec50d2023302223b9e6fc6b86dbb345ffbab22bf7852d0f?chain=testnet) |
-| Owner grants the delegate a mandate | `(ok true)` | [block 719,378](https://explorer.hiro.so/txid/0xfb677877d675498fe0dfccd0f95f654aa576c9c81bb34b64eece2f315ae8c673?chain=testnet) |
-| Delegate allocates 100,000 to the venue | `(ok u100000)` | [block 719,382](https://explorer.hiro.so/txid/0x73924838982ced49643ec0e3710b712b624fb140ed7e5e33e734a9eeb431e03f?chain=testnet) |
-| Delegate unwinds the position | `(ok u100000)` | [block 719,384](https://explorer.hiro.so/txid/0x43bad4af1df7ee5f48df87a9cf9b7a8f89a2981ef99f97b53248d1c5e536f2ab?chain=testnet) |
-| Owner withdraws 400,000 | `(ok true)` | [block 719,385](https://explorer.hiro.so/txid/0x1f978cfe8c63bd739e09495ca52f93b412bed98d60998ace774fa2e795cf7af5?chain=testnet) |
+| Owner deposits 20,000 sats | `(ok true)` | [block 719,939](https://explorer.hiro.so/txid/0xd210c8dd03fa8051bbd01d00082f883b76c5997c6b64d24f75a46b210bb75de5?chain=testnet) |
+| Owner grants the delegate a mandate | `(ok true)` | [block 719,941](https://explorer.hiro.so/txid/0x085c254f86569275e8bfa0cac65152a84875dde97ea676d55cc801159a25fbf9?chain=testnet) |
+| Delegate allocates 10,000 sats to the venue | `(ok u10000)` | [block 719,943](https://explorer.hiro.so/txid/0x1f5c17e483098fdbd11fe14f7f083b50d02febc1c5efdb81ba9e0faad63edbf4?chain=testnet) |
+| Delegate unwinds the position | `(ok u10000)` | [block 719,945](https://explorer.hiro.so/txid/0xa7be818fc0711f31c6f372f1e7755e3506d8dcd0c4122f84b1c330d57fd815b6?chain=testnet) |
+| Owner withdraws 20,000 sats | `(ok true)` | [block 719,947](https://explorer.hiro.so/txid/0xbf277b197ad41ffc5816129ebc3c2463f7954d6baeba25b3b89d3599333f061a?chain=testnet) |
 
-After the run, the vault holds none of the owner's tokens and the owner's wallet
-holds all of them. The setup transactions and every transaction hash are listed in
-[docs/EVIDENCE.md](docs/EVIDENCE.md), entries E-017 to E-019.
+The sBTC transfer events record each movement: owner to vault, vault to venue,
+venue to vault and vault to owner. After the run, the vault and the venue hold none
+of the owner's sBTC, and the owner's wallet holds all of it. The setup transactions
+and every transaction hash are listed in [docs/EVIDENCE.md](docs/EVIDENCE.md), entry
+E-024. An earlier run, made before testnet's official sBTC was identified, used a
+mock token in its place (E-017 to E-019).
 
 ### Mainnet probe
 
@@ -134,9 +137,10 @@ Contract: `SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH.mandate-probe-mainnet`, dep
 
 ## Running the test suite
 
-**Requirements:** Node.js 26 and npm, and network access to `api.hiro.so`. Every
-test runs against a fork of Stacks mainnet served by Hiro's public API. Neither an
-API key nor the Clarinet CLI is required.
+**Requirements:** Node.js 26 and npm, and network access to `api.hiro.so`, and to
+`api.testnet.hiro.so` for the testnet test. Every test runs against a fork of a
+Stacks network served by Hiro's public API. Neither an API key nor the Clarinet CLI
+is required.
 
     git clone https://github.com/emmanuelist/mandate
     cd mandate
@@ -152,6 +156,11 @@ The Jing test forks an earlier block, 9,036,500, from a separate manifest, and r
 on its own:
 
     npx vitest run --config vitest.jing.config.ts
+
+The testnet test forks Stacks testnet at block 719,800, from a third manifest, and
+runs the vault and the testnet venue against testnet's official sBTC:
+
+    npx vitest run --config vitest.testnet.config.ts
 
 Operational notes:
 
@@ -182,12 +191,15 @@ To deploy an independent copy and run the same lifecycle:
    `mnemonic = "<your seed words>"`. Use a seed reserved for testnet; the file is
    excluded from version control. The seed's first account deploys the contracts
    and acts as the owner, and its second account acts as the delegate.
-2. Run `npm run testnet:accounts` to display both addresses, then fund the first
-   account with at least 8.11 testnet STX from a faucet (see
+2. Run `npm run testnet:accounts` to display both addresses and their balances,
+   then fund the first account with at least 7.51 testnet STX and 20,000 sats of
+   testnet sBTC from a faucet (see
    [testnet faucets](https://docs.stacks.co/learn/network-fundamentals/mainnet-and-testnets)).
-3. Run `npm run testnet`. The script deploys the five contracts, executes one
-   mandate end to end, confirms that the balances reconcile and writes the records
-   to `deployments/`. Contracts already deployed with identical source are skipped.
+3. Run `npm run testnet`. The script deploys the four contracts listed in
+   `Clarinet-testnet.toml`, executes one mandate end to end with testnet sBTC,
+   confirms that the balances reconcile and writes the records to `deployments/`.
+   Contracts already deployed with identical source are skipped, and the sBTC
+   returns to the owner at the end of the run.
 
 ## Known limitations
 
@@ -199,8 +211,9 @@ To deploy an independent copy and run the same lifecycle:
   exist only in the venue's own ledger, so a venue that misreports its ledger
   consistently cannot be detected by measurement. The owner's venue allowlist is
   the safeguard against this risk (D-011).
-- **The testnet deployment uses mock contracts** (D-004). The vault's integration
-  with Zest's deployed contract is tested on a mainnet fork instead.
+- **The testnet venue is a stand-in** (D-017). Zest is not available on testnet, so
+  the testnet run uses a mock venue holding testnet's official sBTC. The vault's
+  integration with Zest's deployed contract is tested on a mainnet fork instead.
 - **Jing settlement is untested.** Fills require a signed Pyth price update, which
   cannot be produced on a fork.
 
@@ -210,17 +223,19 @@ To deploy an independent copy and run the same lifecycle:
       mandate-vault-v3.clar       The vault
       venue-trait.clar            The interface the vault requires of a venue; Zest's vault conforms as deployed
       sip-010-trait.clar          The standard token trait, included so that one source deploys on every network
-      mock-token.clar             Stand-in for sBTC on testnet and in the tests
-      mock-venue.clar             Stand-in yield venue on testnet and in the tests
+      mock-venue-sbtc.clar        Stand-in yield venue holding testnet sBTC, for testnet and its fork
+      mock-token.clar             Stand-in for sBTC in the tests and the earlier testnet run
+      mock-venue.clar             Stand-in yield venue in the tests and the earlier testnet run
       hostile-venue.clar          An adversarial venue used in the tests
       mandate-vault.clar          First version, retained with its tests
       mandate-vault-v2.clar       Second version, retained with its tests
       mandate-probe-mainnet.clar  The minimal probe deployed on mainnet
       *probe.clar, venue-spike.clar   Exploratory contracts behind the venue findings
-    tests/                        73 tests in 17 files, plus the Jing fork test
+    tests/                        73 tests in 17 files, plus the Jing and testnet fork tests
     scripts/                      Testnet deployment, execution and verification; the specification check
     deployments/                  Testnet deployment records
     docs/                         Specification, plan, decisions, evidence and verified dependency facts
+    Clarinet*.toml                Manifests for the mainnet fork, the Jing fork and the testnet fork
 
 ## Documentation
 

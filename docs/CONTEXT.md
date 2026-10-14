@@ -21,21 +21,22 @@ Verified facts about what Mandate depends on, each with how and when it was chec
 | Mandate probe (ours) | `SP24BN6HQCT1B37TD9MDJ3Y3BEZCMG9V1Y9985AGH.mandate-probe-mainnet` | owner-only `fund`, `allocate`, `unwind`, `rescue` | E-001, E-002 |
 
 ## Our contracts on testnet
-Deployed by `npm run testnet` from account 1 of `settings/Testnet.toml` and recorded in `deployments/testnet.json`. `npm run testnet:verify` checks each one's source and Clarity version against the repo, with no keys.
+Deployed by `npm run testnet` from account 1 of `settings/Testnet.toml`, which deploys what `Clarinet-testnet.toml` lists, and recorded in `deployments/testnet.json`. `npm run testnet:verify` checks each one's source and Clarity version against the repo, with no keys.
 
 | Contract | Clarity | Block | Verified |
 |---|---|---|---|
-| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.sip-010-trait` | 4 | 719,259 | `npm run testnet:verify`, 2026-10-14 (E-017) |
+| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.sip-010-trait` | 4 | 719,259 | `npm run testnet:verify`, 2026-10-14 (E-024) |
 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.venue-trait` | 4 | 719,260 | same |
-| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-token` (mock sBTC) | 3 | 719,263 | same |
-| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue` | 4 | 719,265 | same |
 | `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mandate-vault-v3` | 4 | 719,267 | same |
+| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue-sbtc` (holds testnet sBTC) | 4 | 719,933 | same |
+| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-token` (earlier run only) | 3 | 719,263 | E-017 |
+| `ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5.mock-venue` (earlier run only) | 4 | 719,265 | E-017 |
 
 ## SDKs and tools
 | Tool | Version | Notes | Verified |
 |---|---|---|---|
 | clarinet CLI | 3.24.1 | the binary contains `HIRO_API_KEY` and `x-api-key`; key support untested | `clarinet --version` and binary strings, 2026-10-13 |
-| @stacks/clarinet-sdk | 3.23.2 | runs the tests; `initial_height` under `[repl.remote_data]` pins a fork (`Clarinet-jing.toml`); no API key support found | `package.json` and the SDK's wasm, 2026-10-13 |
+| @stacks/clarinet-sdk | 3.23.2 | runs the tests; `initial_height` under `[repl.remote_data]` pins a fork (`Clarinet-jing.toml`), and `api_url = "https://api.testnet.hiro.so"` forks testnet (`Clarinet-testnet.toml`, E-023); no API key support found | `package.json` and the SDK's wasm, 2026-10-13 |
 | vitest-environment-clarinet | 3.0.2, the latest | the `clarinet` test environment. Sets both `transformMode` (for Vitest 3) and `viteEnvironment: "ssr"`, so Vitest 4 warns that `transformMode` is deprecated and then uses `viteEnvironment`. The warning prints in passing runs too and is harmless | its `index.js` and Vitest's `init` chunk; 18 warnings in each green CI run, 2026-10-14 |
 | vitest | 4.1.11 | full suite 117 s locally | E-007 |
 | Node | 26 | CI uses the same major | `node -v`, 2026-10-13 |
@@ -54,6 +55,7 @@ Deployed by `npm run testnet` from account 1 of `settings/Testnet.toml` and reco
 - **Testnet has no standard SIP-010 trait.** The reset erased it: `sip-010-trait-ft-standard` under `ST3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8NQXMNRQ` (mainnet's deployer, on testnet) and under `ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT` both answer 404, so a contract that names it can't deploy there. The vault carries its own copy (D-014). `/v2/contracts/interface`, 2026-10-14.
 - **A testnet contract can't be redeployed under the same name.** `npm run testnet` skips a contract that's already deployed only if its source is identical to the repo's, and otherwise stops before sending anything. A changed contract needs a fresh testnet account (a new seed in `settings/Testnet.toml`). Tested by editing a contract locally, 2026-10-14.
 - **Two SIP-010 traits.** Bitflow defines its own (`SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.sip-010-trait-ft-standard-v-1-1`); Granite and Jing use the canonical one (`SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard`). One trait type can't cover every venue. `contracts/granite-probe.clar`.
+- **A venue must name the token it moves.** The venue trait's `deposit (amount min-out recipient)` takes no token, so a venue calls its token by a fixed principal. A venue that names a testnet contract can't deploy on a mainnet fork, where that contract doesn't exist, so `mock-venue-sbtc` is tested on a testnet fork instead (D-017).
 - **Trait conformance is structural.** A contract can be passed as a trait it never declares if its functions match: Zest's vault as Mandate's venue trait (E-009), and sBTC as Bitflow's SIP-010 trait in v2's tests.
 - **An `as-contract?` allowance on the venue's own token covers the venue burning the vault's shares on redeem** (`with-ft <venue> "*" <shares>`). E-009.
 - **Only four devnet accounts exist:** `deployer` and `wallet_1` to `wallet_3` (`settings/Devnet.toml`). Tests that need a stranger reuse `wallet_2`.

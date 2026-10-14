@@ -25,6 +25,8 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-020 | 2026-10-14 | Back-to-back retries fail together inside a rate-limit window. On `main` after #21, the Jing suite's worker failed to start three times between 00:40:03.8 and 00:40:06.4 UTC, three seconds after Hiro had told the runner to wait 29 and 53 s. The pull request's run of the same code started the suite after its last wait had run out, and passed. Rerun, the failed job passed: the Jing suite started inside a window again, and this time the SDK waited out its one rate limit. The new loop waits 60 s between attempts and still exits at once on a pass | [run 38491027038](https://github.com/emmanuelist/mandate/actions/runs/38491027038), attempts 1 and 2; [run 38490379351](https://github.com/emmanuelist/mandate/actions/runs/38490379351); the loop run locally (output below) | `fb2d0d4`, `e60ffca` |
 | E-021 | 2026-10-14 | The minute's wait worked the first time CI needed it. On #23, Hiro told the runner to wait 51 and 53 s at 00:55:02 and 00:55:03 UTC; ten of the full suite's workers failed to start at 00:55:12, and the attempt failed. The retry began at 00:56:13, after that window had closed, and passed 73 of 73; the Jing suite then passed. Back to back, the retry would have started inside the window | [run 38492547121](https://github.com/emmanuelist/mandate/actions/runs/38492547121) (output below) | `cb54a4d` |
 | E-022 | 2026-10-14 | The README works for a stranger. From a fresh clone of `9-readme`, with only Node 26, npm and npx on PATH and no Clarinet CLI, `npm ci`, the full suite (73 of 73 in 17 files), the Jing suite (1 of 1) and `npm run testnet:verify` (14 of 14 checks) pass, and the clone stays clean. Without `settings/Testnet.toml`, the testnet scripts say how to create it. The README's other claims, checked the same day: the mainnet probe's five transactions cost 405,381 µSTX in fees and left it holding no STX, sBTC or Zest shares; Zest and Granite hold 98% of Stacks lending and CDP TVL on DeFiLlama; PoX-5 accrues staking rewards as sBTC; `clarinet check` checks 14 contracts after its overwrite prompt | transcript below; [DeFiLlama protocols API](https://api.llama.fi/protocols); [What's Changed in PoX-5](https://docs.stacks.co/operate/staking-stx/whats-changed-in-pox-5) | `efcb173`, `b97080f` |
+| E-023 | 2026-10-14 | The vault and a testnet sBTC venue work with testnet's official sBTC on a testnet fork pinned at block 719,800: a real holder deposits 100,000 sats, the delegate allocates and unwinds them, and the owner withdraws, with every sat accounted for. A 2% fill against a 1% limit is refused by the venue enforcing the vault's floor (`u201`), and nothing moves. The Clarinet SDK forks testnet through `api_url` | `npx vitest run --config vitest.testnet.config.ts` (output below) | `8a0276a` |
+| E-024 | 2026-10-14 | M1's lifecycle on testnet with testnet's official sBTC, one transaction per step: the owner deposits 20,000 sats and grants a delegate, the delegate allocates 10,000 into the testnet sBTC venue and unwinds them, and the owner withdraws all 20,000. The transfer events show the sBTC moving from owner to vault, vault to venue, venue to vault and vault to owner, and the books end where they started. `npm run testnet` deployed only the new venue, finding the other three contracts identical to the repo | [deposit](https://explorer.hiro.so/txid/0xd210c8dd03fa8051bbd01d00082f883b76c5997c6b64d24f75a46b210bb75de5?chain=testnet) `(ok true)` · [grant](https://explorer.hiro.so/txid/0x085c254f86569275e8bfa0cac65152a84875dde97ea676d55cc801159a25fbf9?chain=testnet) `(ok true)` · [allocate](https://explorer.hiro.so/txid/0x1f5c17e483098fdbd11fe14f7f083b50d02febc1c5efdb81ba9e0faad63edbf4?chain=testnet) `(ok u10000)` · [unwind](https://explorer.hiro.so/txid/0xa7be818fc0711f31c6f372f1e7755e3506d8dcd0c4122f84b1c330d57fd815b6?chain=testnet) `(ok u10000)` · [withdraw](https://explorer.hiro.so/txid/0xbf277b197ad41ffc5816129ebc3c2463f7954d6baeba25b3b89d3599333f061a?chain=testnet) `(ok true)`; blocks 719,935 to 719,947; venue deployed in [block 719,933](https://explorer.hiro.so/txid/0x086d9b94b07098b68399dfabc75e5716329b8f81b7a8bbb5ef8e0de4a65497c4?chain=testnet); `npm run testnet:verify` (output below) | `655e5df` |
 
 ### E-001 output
 ~~~text
@@ -366,4 +368,66 @@ docs.stacks.co, What's Changed in PoX-5: "PoX-5 accumulates rewards as sBTC."
 $ clarinet check
 Overwrite? [Y/n]   (the simnet deployment plan, gitignored)
 ✔ 14 contracts checked
+~~~
+
+### E-023 output
+~~~text
+$ npx vitest run --config vitest.testnet.config.ts --silent=false --reporter=verbose
+  deposit 100000 sats      : idle 100000 | vault sBTC 100000 | owner wallet 1351720000 before
+  delegate allocates       : (ok u100000) | vault holds 100000 shares | venue sBTC 100000 | vault sBTC 0
+  delegate unwinds         : (ok u100000) | idle 100000 | vault sBTC 100000 | venue sBTC 0
+  owner withdraws          : (ok true) | wallet change 0 | vault sBTC 0
+  2% haircut, 1% limit     : (err u201) | idle 100000 | vault sBTC 100000
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+~~~
+
+### E-024 output
+~~~text
+$ npm run testnet
+deployer ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5
+  sip-010-trait     already deployed, identical to the repo   0x166a1bab5b3105827474def3ee7db1635006818573490b89f7ef8781538f23ee
+  venue-trait       already deployed, identical to the repo   0xd5fde87dbd1c870bc8b522f169cce570e3ff7e989530545ff7f254c3c245066b
+  mandate-vault-v3  already deployed, identical to the repo   0x26400b07e407980984c89c9da2cf61ff469202e4c14eb97af4241e3a91700ce6
+  mock-venue-sbtc   0x086d9b94b07098b68399dfabc75e5716329b8f81b7a8bbb5ef8e0de4a65497c4 ... block 719933
+wrote deployments/testnet.json
+owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5
+delegate ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW
+  owner allowlists testnet sBTC  0x558e9850c2e5db6dff14f1d01927e17353acc221d85a44584dbee9191cce9f98 ... (ok true), block 719935
+  owner allowlists the venue     0xc52068ae8706188434073581d7b6c2185235ea6720496d04cb55466e3da6eacc ... (ok true), block 719937
+  owner deposits 20,000 sats     0xd210c8dd03fa8051bbd01d00082f883b76c5997c6b64d24f75a46b210bb75de5 ... (ok true), block 719939
+  owner grants the delegate      0x085c254f86569275e8bfa0cac65152a84875dde97ea676d55cc801159a25fbf9 ... (ok true), block 719941
+  delegate allocates 10,000      0x1f5c17e483098fdbd11fe14f7f083b50d02febc1c5efdb81ba9e0faad63edbf4 ... (ok u10000), block 719943
+  delegate unwinds 10,000        0xa7be818fc0711f31c6f372f1e7755e3506d8dcd0c4122f84b1c330d57fd815b6 ... (ok u10000), block 719945
+  owner withdraws 20,000 sats    0xbf277b197ad41ffc5816129ebc3c2463f7954d6baeba25b3b89d3599333f061a ... (ok true), block 719947
+books reconcile, before: {"ownerIdleInVault":"u0","ownerPosition":"u0","ownerSbtc":"(ok u230000)","vaultSbtc":"(ok u0)","venueSbtc":"(ok u0)"} 
+                  after:  {"ownerIdleInVault":"u0","ownerPosition":"u0","ownerSbtc":"(ok u230000)","vaultSbtc":"(ok u0)","venueSbtc":"(ok u0)"}
+wrote deployments/testnet-run.json
+exit 0 · elapsed 126 s
+
+$ npm run testnet:verify
+contracts deployed by ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5:
+  ok   sip-010-trait     block 719259, Clarity 4, source identical to the repo
+  ok   venue-trait       block 719260, Clarity 4, source identical to the repo
+  ok   mandate-vault-v3  block 719267, Clarity 4, source identical to the repo
+  ok   mock-venue-sbtc   block 719933, Clarity 4, source identical to the repo
+end-to-end run, owner ST3K5BMJE4CNKSQ3A2DT7JTXB2MJYW8892ASVWQV5, delegate ST3TMSRWZJ2F50307Q1A5B6KXY4YZ6CTW66D2BWFW:
+  ok   owner allowlists testnet sBTC    success, block 719935, (ok true)
+  ok   owner allowlists the venue       success, block 719937, (ok true)
+  ok   owner deposits 20,000 sats       success, block 719939, (ok true)
+  ok   owner grants the delegate        success, block 719941, (ok true)
+  ok   delegate allocates 10,000        success, block 719943, (ok u10000)
+  ok   delegate unwinds 10,000          success, block 719945, (ok u10000)
+  ok   owner withdraws 20,000 sats      success, block 719947, (ok true)
+all 11 checks pass
+
+# transfer events, from the testnet API
+deposit   transfer  sbtc-token        20000  owner -> vault
+allocate  transfer  sbtc-token        10000  vault -> venue
+allocate  mint      mock-venue-sbtc   10000  -> vault
+unwind    burn      mock-venue-sbtc   10000  vault ->
+unwind    transfer  sbtc-token        10000  venue -> vault
+withdraw  transfer  sbtc-token        20000  vault -> owner
+
+# account 1: 486.28 STX before and 485.28 after (one deployment, five calls); 230,000 sats of testnet sBTC before and after
 ~~~

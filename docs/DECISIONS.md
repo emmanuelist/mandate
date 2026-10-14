@@ -100,3 +100,10 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Decision:** the vault holds SIP-010 tokens only. sBTC is one, and so is every asset the venues in scope take from the vault.
 **Alternatives:** a native STX path, with its own allowance, deposit, withdrawal and tests, for no venue in M1 to M3.
 **Consequences:** an owner can't deposit native STX. Revisit if a venue that takes native STX, such as STX staking, comes into scope.
+
+## D-017 · M1's testnet run uses testnet's official sBTC; only the venue is a stand-in · 2026-10-14 · proposed, supersedes D-004
+**Context:** D-004 replaced both sBTC and the venue with mocks on testnet, on the premise that testnet had neither. Testnet does have an official sBTC, `SN3VMHXEN64ZZF71JQ5VESXDWTR301XTTXGF4J8F1.sbtc-token`, deployed the day after the reset (`docs/CONTEXT.md`). Only Zest is missing.
+**Decision:** M1's testnet run uses real testnet sBTC. The venue remains a stand-in: `mock-venue-sbtc` has `mock-venue`'s semantics and holds testnet sBTC. A venue must name the token it moves, and this one names a testnet contract, so it deploys only to testnet and is tested on a testnet fork pinned at block 719,800 (`Clarinet-testnet.toml`), which CI runs on every pull request. The vault's integration with Zest stays proven on a mainnet fork (E-011).
+**Alternatives:** keeping the mock token, which leaves an avoidable stand-in in M1's evidence; a venue that takes its token as an argument, which the venue trait's `deposit (amount min-out recipient)` does not allow.
+**Consequences:** reproducing the run needs 20,000 sats of testnet sBTC as well as STX, and the sBTC returns to the owner at the end. The earlier mock-token run (E-018, E-019) stays in the record. Like D-004, this needs sign-off before M1 is submitted, now for one stand-in, the venue.
+**Evidence:** E-023, E-024.
