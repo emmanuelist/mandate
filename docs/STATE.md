@@ -1,14 +1,15 @@
 # State
-_Last verified: 2026-10-14 at `13a3fda`_
+_Last verified: 2026-10-14 at `2d0a846`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M2 · Mainnet Launch + Adversarial Suite (due 2026-12-05, 52 days left). M1's exit criteria are met (E-014, E-022, E-024); D-017 awaits sign-off.
-**Next action:** the findings log and static checks (#37), with #48's flaw as its first finding. Then v5's testnet rehearsal before mainnet (#34)
-**Blocked on:** nothing for #37. The mainnet issues (#34 to #36) need the owner to fund the deployer with STX and the mandate with sBTC and about 20 USDCx.
+**Next action:** v5's testnet rehearsal and the mainnet runbook (#34): deploy v5 on testnet, rerun the lifecycle and the reference delegate on it, and prepare v5's and the Granite adapter's mainnet deployment
+**Blocked on:** nothing for the testnet rehearsal. Mainnet itself (#34 to #36) needs the owner's go-ahead, and the owner to fund the deployer with STX and the mandate with sBTC and about 20 USDCx.
 
 ## Works (verified this session)
 | Capability | Verified by | Evidence |
 |---|---|---|
+| The structured review is published: `docs/REVIEW.md` logs 15 findings with severity, status and fixing commit or reason. Static checks: four manifests type-check with no errors, and each of Clarinet's 64 warnings is justified at its line, or the check fails | `npm run static`; four mutants make it fail | E-036, D-023 |
 | v5 closes the vault while a venue runs: a venue that calls back in is refused with nothing moved, and the attack that drains another owner on v4 fails on v5 through every path tried | 9 tests on v4 and v5; 15 adversarial re-entry cases; v5 without the check fails 21 tests | E-035, D-022 |
 | A stranger can follow the README: from a fresh clone, `npm ci`, both mainnet fork suites and `npm run testnet:verify` pass with only Node on PATH. The testnet fork suite was added after that run | fresh clone of `9-readme` from GitHub; the testnet suite locally | E-022, E-023 |
 | v4, the testnet sBTC venue and both traits are deployed on testnet, each with the repo's source and Clarity version, and testnet sBTC's cap is set | `npm run testnet:verify`: 16 of 16 checks | E-030 |

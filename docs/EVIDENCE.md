@@ -38,6 +38,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-033 | 2026-10-14 | Invariants hold over random sequences. Two owners and two delegates take 400 random steps per seed across two tokens and every action. After every step the vault's tokens match the owners' idle balances, its venue shares match their positions, and no delegate's tokens grow, and every owner can always exit completely. The fixed seed reaches 26 successful allocations, 14 unwinds, 12 owner unwinds and 24 exits; three random seeds reached 25 to 49 allocations. On CI's runners a walk takes up to 10 s, past Vitest's 5 s default, and one random seed (1280284992) reached only 12, so each walk has a 60 s timeout, and over 61 seeds allocations ranged from 12 to 49 and unwinds and exits from 31: the fixed seed must reach 15 of each, a random seed 5 allocations and 15 unwinds and exits. A token sent to the vault at step 200, which the books don't record, fails the check at that step. The local suites pass: 95 tests in 6 files | `npx vitest run --config vitest.local.config.ts` (output below) | `68be905` |
 | E-034 | 2026-10-14 | After #45, the local suites wait on Hiro's rate limit zero times, and the fork suite's own waits did not fall. Before the change, `main` waited 12 times (630 s), all in the fork suite. After it, the pull request's run waited 14 times (645 s) in the fork suite and once (37 s) in the Jing suite, and `main`'s run waited 11 times (586 s), all in the fork suite. A fresh clone's `npm ci && npm test` passed: 93 of 93 local and 41 of 41 fork tests, exit 0 in 523 s | runs [38552641786](https://github.com/emmanuelist/mandate/actions/runs/38552641786), [38575611800](https://github.com/emmanuelist/mandate/actions/runs/38575611800) and [38577444982](https://github.com/emmanuelist/mandate/actions/runs/38577444982); waits counted from each run's log lines `Rate limited, retrying after N seconds` | `96d956e` |
 | E-035 | 2026-10-14 | The structured review found that v4 credits a venue's call back twice (#48), and v5 closes the vault while a venue runs (D-022). On v4, an owner who lists a venue of their own takes another owner's deposit through the owner's unwind, the delegate's unwind, and a public balance read after the redeem: each time mallory's side puts in 500,000 and takes out 999,999, and alice's withdrawal of her 500,000 fails with the vault holding 1. On v5 each attempt is refused with nothing moved, with `u120`, or `u109` where the venue passes the refusal on from a read, and a venue that ignores the refusal leaves the books exact. The adversarial suite's 15 re-entry cases pass, two of them Clarity's own abort of a call back into the running function. v5 without its check fails 21 tests, among them all 13 adversarial re-entry cases it refuses. The invariant walk, with one venue calling back at random, holds on v5 over the fixed seed and 73 random seeds and refuses every call back; on v4 every one of 8 seeds fails, 5 of them at the step where an unwind is credited twice. All three manifests check with no errors. Local suites: 119 of 119 in 7 files. Fork suite on v5: 41 of 41 in 16 files | `npx vitest run --config vitest.local.config.ts`; `INVARIANT_VAULT=mandate-vault-v4 INVARIANT_SEED=<n>` on the walk; a mutant; `npx vitest run`; `clarinet check` (output below) | `13a3fda` |
+| E-036 | 2026-10-14 | The structured review is published and its static checks run. `docs/REVIEW.md` logs 15 findings with their severity, status and fixing commit or reason, among them R-001, the flaw #48 fixed. All four manifests the check covers type-check with no errors, and each of the 64 warnings Clarinet raises is justified in the log at its line. The check fails on a warning the log doesn't list, on a row whose warning is gone, on a removed row, and on a contract that doesn't type-check. Clarinet's taint analysis with `callee_filter` on gave v5 14 warnings in 6 of 10 runs and 19 in 4; off, 26 in 10 of 10. From an empty home with no cache, `clarinet check` fetches 20 requirements and writes clean JSON. The two deployed contracts `granite-venue` reads, `state-v1` and `usdcx`, return `(ok (ft-get-balance ...))` from `get-balance` | `npm run static`; four throwaway mutants; ten runs each way; `.cache/requirements` (output below) | `2d0a846` |
 
 ### E-001 output
 ~~~text
@@ -725,4 +726,39 @@ $ npx vitest run
  Test Files  16 passed (16)
       Tests  41 passed (41)
 in 464 s
+~~~
+
+### E-036 output
+~~~text
+$ npm run static
+static checks: 4 manifests check with no errors, and all 64 warnings are justified in docs/REVIEW.md.
+
+# four throwaway mutants, each restored afterwards
+# 1. the mock-token row removed from docs/REVIEW.md
+  contracts/mock-token.clar unused_binding: Clarinet warns at lines [8], docs/REVIEW.md lists []
+# 2. an unused let binding added to contracts/mock-token.clar
+  contracts/mock-token.clar unused_binding: Clarinet warns at lines [8, 14], docs/REVIEW.md lists [8]
+# 3. a line the log claims but Clarinet no longer warns at
+  contracts/phisher-v3.clar panic: Clarinet warns at lines [7, 8], docs/REVIEW.md lists [7, 8, 9]
+# 4. a type error in contracts/mock-token.clar
+  Clarinet.toml: contracts/mock-token.clar:14 expecting expression of type 'uint', found '(string-ascii 4)'
+# each exited 1
+
+# the taint analysis on Clarinet-review.toml, ten runs each way: v5's warnings, granite-venue's
+callee_filter = true:   6 runs 14 4 | 4 runs 19 4
+callee_filter = false: 10 runs 26 2
+
+# a fresh environment: HOME empty, no .cache
+$ clarinet check -c -m Clarinet-review.toml --output json
+exit 0; stdout parses as JSON, success true; 20 requirements fetched; stderr: note: using deployments/default.simnet-plan.yaml
+
+# the reads granite-venue unwraps, as deployed
+.cache/requirements/SP3M2BYF7RGF8WKW5FVDNJ6WR8D7AR9BHDXAKPXZE.state-v1.clar:459
+  (define-read-only (get-balance (account principal)) (ok (ft-get-balance lp-token account)))
+.cache/requirements/SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx.clar:97
+  (define-read-only (get-balance (who principal)) (ok (ft-get-balance usdcx-token who)))
+
+# the Clarinet release CI installs
+$ shasum -a 256 clarinet-linux-x64-glibc.tar.gz
+2f77903d3af5046df5730c23d4451b03ddd56c7206efd466a5a7f6acab376c75  (the same line is in the release's checksums.txt)
 ~~~

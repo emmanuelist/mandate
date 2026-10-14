@@ -63,7 +63,8 @@ act in the owner's name.
 
 Version 5, the version for mainnet, closes the vault while it calls a venue: until
 the call returns, every function that changes the vault's state is refused. The
-structured review found that version 4 lacked this protection. A venue listed by
+structured review ([docs/REVIEW.md](docs/REVIEW.md)) found that version 4 lacked
+this protection. A venue listed by
 its own owner could deposit its own tokens into the vault while paying out a
 withdrawal from the venue, and the vault credited those tokens twice, to the venue
 and to the owner, at the expense of other owners (#48). Version 4 was only ever
@@ -195,9 +196,10 @@ Operational notes:
   integration follows the same policy, with up to three attempts one minute apart.
 - A warning that the Vitest environment `clarinet` defines `transformMode`
   originates in Hiro's test environment package and does not affect the results.
-- `clarinet check` (Clarinet CLI 3.24.1) type-checks the contracts. If it asks
-  whether to overwrite the simnet deployment plan, answer Y. The plan is a
-  generated file and is not tracked.
+- `npm run static`, which requires the Clarinet CLI 3.24.1, runs `clarinet check`
+  on every manifest. It fails if a contract does not type-check, or if Clarinet
+  raises a warning that [docs/REVIEW.md](docs/REVIEW.md) does not justify.
+  Continuous integration runs it on every change.
 
 ## Deploying to testnet
 
@@ -265,16 +267,17 @@ To deploy an independent copy and run the same lifecycle:
       mandate-probe-mainnet.clar  The minimal probe deployed on mainnet
       *probe.clar, venue-spike.clar   Exploratory contracts behind the venue findings
     tests/                        160 tests in 23 files, 119 local and 41 on a mainnet fork, plus the Jing and testnet fork tests
-    scripts/                      Testnet deployment, execution and verification; the reference delegate; the specification check
+    scripts/                      Testnet deployment, execution and verification; the reference delegate; the specification and static checks
     deployments/                  Testnet deployment records
     docs/                         Specification, plan, decisions, evidence and verified dependency facts
-    Clarinet*.toml                Manifests for the mainnet fork, the Jing fork, the testnet fork and the local suites
+    Clarinet*.toml                Manifests for the mainnet fork, the Jing fork, the testnet fork, the local suites and the static checks
 
 ## Documentation
 
 | Document | Contents |
 | --- | --- |
 | [docs/SPEC.md](docs/SPEC.md) | Protocol specification: roles and assets, policy model, authorization flow, error codes, threat model and non-goals |
+| [docs/REVIEW.md](docs/REVIEW.md) | The structured review: its methods, every finding with its severity and status, and every static-analysis warning with the reason it stands |
 | [docs/STATE.md](docs/STATE.md) | Current status, with the verification behind each claim |
 | [docs/PLAN.md](docs/PLAN.md) | Milestones and their exit criteria |
 | [docs/EVIDENCE.md](docs/EVIDENCE.md) | The evidence behind each claim: transactions, CI runs and captured output |

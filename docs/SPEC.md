@@ -128,6 +128,8 @@ A venue's own errors pass through unchanged, such as a venue refusing a deposit 
 
 ## 4. Threat model
 
+What the review found, from this model and the suites that test it, is logged in `docs/REVIEW.md`.
+
 ### Trust assumptions
 
 - A Clarity contract can't change after deployment. The vault has no pause or upgrade path, and its deployer's only power is setting each asset's cap once.
