@@ -34,6 +34,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-029 | 2026-10-14 | The adversarial suite: 43 hostile-delegate cases against v4, all refused with the exact code, no asset events and no balance changed, across seven classes: 8 oversized orders, 6 unlisted assets, 7 substituted venues, 6 rate-limit races, 6 expiry and revocation, 7 reaching another owner's balance and 3 withdrawing outright. Two deliberate mutants, a wrong expected code and a legal move wrapped as an attack, make it fail, so it isn't vacuous. The full suite passes: 127 tests in 20 files | `npx vitest run tests/v4-adversarial.test.ts` (output below) | `075f4f3` |
 | E-030 | 2026-10-14 | v4 is on testnet: `npm run testnet` deployed it ([block 723,619](https://explorer.hiro.so/txid/0xeb74f75cb3eb9b7e3c13fb99f9f42b28af56124028967e316c8d4d8eab6b6cda?chain=testnet)) with its source identical to the repo, skipped the four contracts already there, set testnet sBTC's cap at 1,000,000 sats, and ran the lifecycle on v4 with the books reconciling. v3 stays on testnet as M1's record | `npm run testnet` and `npm run testnet:verify` (output below) | `c82b9ac`, `36ed855` |
 | E-031 | 2026-10-14 | The reference delegate moves funds without the owner signing. Holding only its own key, it ran five rounds on testnet against a mandate the owner granted it: two allocations and three unwinds, each signed by the delegate alone in deny mode, with post-conditions fixing what the vault sends and bounding what the venue pays back, and transfer events that match. The owner's only transactions were funding the delegate's fees, the allowlists, the deposit and the grant. Six tests cover its decisions, and the full suite passes: 134 tests in 21 files | [allocate](https://explorer.hiro.so/txid/0x6ee1c8463185dd56c29d1cdfbf4a6862826992c07d98570853edc391438a0176?chain=testnet) `(ok u20000)` · [unwind](https://explorer.hiro.so/txid/0x663709b37ae8d9f3ab499e46a5fb9bf2a86b017ee8cfe6392d369403fbe6c39c?chain=testnet) `(ok u10000)` · [allocate](https://explorer.hiro.so/txid/0xe131289dc88397c1e97ef610b046b09cd46cce98a275682b50a636851900df51?chain=testnet) `(ok u20000)` · [unwind](https://explorer.hiro.so/txid/0x80a7df02f0cb17cf4ca3767f8b52f07d781d1af2d1249fa3da8551c99661e9da?chain=testnet) `(ok u20000)` · [unwind](https://explorer.hiro.so/txid/0x5d5b85d71d51dff04f903dfd446799481c1af4053c13fbbb1f8032e033ab2d38?chain=testnet) `(ok u10000)`; `npm run testnet:verify`, 16 of 16 (output below) | `b2ea7b2`, `36ed855` |
+| E-032 | 2026-10-14 | The suites that touch only local contracts run without a fork. On `Clarinet-local.toml`, 93 tests in 5 files pass in about 3 s and send nothing to Hiro; where they used sBTC only as an asset nobody listed, a second local token stands in. The fork suite keeps 41 tests in 16 files. Before the change, CI runs hit Hiro's rate limit 12 to 24 times each | `npx vitest run --config vitest.local.config.ts`, seven runs, and `npx vitest run` (output below) | `b14618a` |
 
 ### E-001 output
 ~~~text
@@ -611,4 +612,26 @@ all 16 checks pass
 
 $ npx vitest run tests/delegate.test.ts
       Tests  6 passed (6)
+~~~
+### E-032 output
+~~~text
+$ npx vitest run --config vitest.local.config.ts     # the first run after Clarinet-local.toml was created
+Error: [vitest-pool]: Failed to start forks worker for test files .../tests/delegate.test.ts.
+ Test Files  4 passed (4)
+      Tests  87 passed (87)
+in 3 s
+
+# the next six runs, three with default workers and three with one
+      Tests  93 passed (93)
+      Tests  93 passed (93)
+      Tests  93 passed (93)
+      Tests  93 passed (93)
+      Tests  93 passed (93)
+      Tests  93 passed (93)
+
+$ npx vitest run        # the fork suite, without the local suites
+ Test Files  16 passed (16)
+      Tests  41 passed (41)
+rate-limit waits: 1
+exit 0 in 465 s
 ~~~

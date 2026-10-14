@@ -1,9 +1,9 @@
 # State
-_Last verified: 2026-10-14 at `36ed855`_
+_Last verified: 2026-10-14 at `b14618a`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M2 · Mainnet Launch + Adversarial Suite (due 2026-12-05, 52 days left). M1's exit criteria are met (E-014, E-022, E-024); D-017 awaits sign-off.
-**Next action:** the invariant tests (#31), then static checks and the findings log (#37)
+**Next action:** the invariant tests (#31), in the local suites, then static checks and the findings log (#37)
 **Blocked on:** nothing for #31 or #37. The mainnet issues (#34 to #36) need the owner to fund the deployer with STX and the mandate with sBTC and about 20 USDCx.
 
 ## Works (verified this session)
@@ -19,7 +19,8 @@ _Last verified: 2026-10-14 at `36ed855`_
 | v3 measures every venue call and refuses a hostile venue's attacks with nothing moved | 7 hostile-venue tests | E-012 |
 | v3 against Zest's real sBTC vault, with no adapter: allocate, unwind, owner exit, every refusal | fork test; with the vault's own token trait, still 99,937 shares in and 99,999 sats out | E-011, D-014 |
 | The venue trait reaches Zest with no adapter | spike on a mainnet fork | E-009 |
-| Full suite, forking the pinned block 9,194,000 with two workers | `npx vitest run`: 134 of 134 tests in 21 files, in 556 s | E-022, E-031 |
+| Local suites, with no fork: 93 tests in 5 files in about 3 s | `npx vitest run --config vitest.local.config.ts` | E-032 |
+| Fork suite, forking the pinned block 9,194,000 with two workers: 41 tests in 16 files | `npx vitest run`, 465 s | E-032 |
 | The adversarial suite: 43 hostile-delegate cases across seven classes, each refused with the exact code, no asset events and no balance changed | `tests/v4-adversarial.test.ts`; two mutants make it fail | E-029 |
 | v4 against Granite's USDCx lending pool through `granite-venue`: allocate, unwind, owner exit, refusals, the adapter's minimum | fork test; books match real balances to the unit | E-028, D-020 |
 | v4 identifies callers by `contract-caller`: a contract an owner calls can't act as the owner, and a contract acting for itself still can | 3 tests; the same call against v3 succeeds | E-027 |
@@ -43,7 +44,7 @@ The vault is not on mainnet yet; that is M2.
 
 ## Broken or unverified
 - v3 stays on testnet as M1's record and still identifies callers by `tx-sender` (E-027). Nothing uses it now that v4 runs there (E-030).
-- CI's retries recovered three `main` runs in a row, as rate-limit waits grew to 24 a run (#45).
+- CI's rate-limit waits reached 24 a run before the local suites stopped forking; how far that brings them down is measured on #45.
 - Jing fills: untested, since settlement needs a signed Pyth update.
 
 ## Open questions
