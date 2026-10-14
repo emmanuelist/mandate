@@ -4,7 +4,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "testnet": "node scripts/testnet-deploy.mjs && node scripts/testnet-e2e.mjs",
+    "testnet:accounts": "node scripts/testnet-accounts.mjs"
   },
   "dependencies": {
     "@stacks/clarinet-sdk": "^3.9.0",
