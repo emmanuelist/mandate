@@ -1,10 +1,10 @@
 # State
-_Last verified: 2026-10-14 at `7655365`_
+_Last verified: 2026-10-14 at `75bf5d8`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
-**Milestone:** M1 · Core Vault + Zest Adapter on Testnet (due 2026-10-31, 17 days left)
-**Next action:** check M1's four exit criteria against EVIDENCE before D-017 goes for sign-off
-**Blocked on:** nothing. D-017, with one testnet stand-in, the venue, needs sign-off before M1 is submitted.
+**Milestone:** M2 · Mainnet Launch + Adversarial Suite (due 2026-12-05, 52 days left). M1's exit criteria are met (E-014, E-022, E-024); D-017 awaits sign-off.
+**Next action:** v4 with the per-vault AUM cap (#29). The owner chooses the cap's amount.
+**Blocked on:** nothing for #29. The mainnet issues (#34 to #36) need the owner to fund the deployer with STX and the mandate with sBTC.
 
 ## Works (verified this session)
 | Capability | Verified by | Evidence |
@@ -41,3 +41,4 @@ The vault is not on mainnet yet; that is M2.
 
 ## Open questions
 - Is D-017 acceptable for M1, with the testnet venue as the one stand-in? The owner confirms.
+- The AUM cap's amount (#29), and after the spike, which Granite path the second venue takes (#32). The owner decides both.
