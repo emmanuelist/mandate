@@ -55,3 +55,4 @@ The vault is not on mainnet yet; that is M2.
 
 ## Open questions
 - Is D-017 acceptable for M1, with the testnet venue as the one stand-in? The owner confirms.
+- One delegate or two for the live mandate (#35)? A mandate's notional limits count raw units of whichever asset moves (R-016), so one delegate over sBTC and USDCx would apply one number to both; two delegates, one per asset, keep each mandate's limits in its own units. The owner decides.

@@ -41,6 +41,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-036 | 2026-10-14 | The structured review is published and its static checks run. `docs/REVIEW.md` logs 15 findings with their severity, status and fixing commit or reason, among them R-001, the flaw #48 fixed. All four manifests the check covers type-check with no errors, and each of the 64 warnings Clarinet raises is justified in the log at its line. The check fails on a warning the log doesn't list, on a row whose warning is gone, on a removed row, and on a contract that doesn't type-check. Clarinet's taint analysis with `callee_filter` on gave v5 14 warnings in 6 of 10 runs and 19 in 4; off, 26 in 10 of 10. From an empty home with no cache, `clarinet check` fetches 20 requirements and writes clean JSON. The two deployed contracts `granite-venue` reads, `state-v1` and `usdcx`, return `(ok (ft-get-balance ...))` from `get-balance` | `npm run static`; four throwaway mutants; ten runs each way; `.cache/requirements` (output below) | `2d0a846` |
 | E-037 | 2026-10-14 | v5 is rehearsed on testnet (#52). `npm run testnet` deployed v5 with the repo's source ([block 725,660](https://explorer.hiro.so/txid/0x8d97cca7121c7d5ec43fae56db34efa636fe9a6971b7488b390060026bb635b2?chain=testnet)), set testnet sBTC's cap and read it back as `u1000000`, and ran the lifecycle on v5: seven transactions, each `(ok ...)`, with the books reconciling exactly. A first attempt at the lifecycle succeeded step by step but failed to reconcile, because the Hiro Platform faucet's address sent the owner 10,000 sats mid-run, at block 725,677; the run now reconciles the owner's wallet net of transfers from outside it. Under a mandate on v5, the reference delegate allocated 20,000, unwound 10,000, allocated 20,000 and unwound 30,000, signing alone in deny mode. It then attempted four calls the mandate forbids, each refused with no events: 20,001 sats against a per-move cap of 20,000 (`u102`), a venue the owner never listed (`u107`), a withdrawal (`u105`), and an allocation after the owner revoked (`u100`). The owner revoked and withdrew all 40,000 sats, and withdrew the 40,000 left in v4, so no testnet vault holds funds. `npm run testnet:verify`: 25 of 25 | `npm run testnet`, `npm run testnet:mandate`, `npm run delegate -- testnet 7500,2500,7500,0` and `attempt <kind>`, `npm run testnet:verify` (output below) | `e749256` |
 | E-038 | 2026-10-14 | The mainnet deployment is ready to run and costs about 3.64 STX at the medium fee estimate (#34). `npm run mainnet:deploy` read no key and sent nothing: it found none of the four contracts on mainnet, estimated each deploy at about 0.61 STX at the medium (0.52 low, 1.00 high), budgeted the two caps at a deploy's price since a vault not yet deployed has no estimate, and found the deployer holding 188.34 STX. Its first version reported a fallback as an estimate, since `fetchFeeEstimate` returns a number, not the three estimates; the script now reads all three. `npm run mainnet:verify` reports that nothing is deployed yet | `npm run mainnet:deploy`; `npm run mainnet:verify` (output below) | `b109eb1` |
+| E-039 | 2026-10-15 | v5's notional limits count raw units of whichever asset moves (#56): `allocate` checks the amount against `max-notional` and the day's total against `max-daily-notional`, and adds the amount to the day's total, with no reference to the asset. Logged as R-016 | `contracts/mandate-vault-v5.clar`, lines 234, 250 and 277 (output below) | `363afa7` |
 
 ### E-001 output
 ~~~text
@@ -835,4 +836,12 @@ mandate-vault-v5 fee 522510 rate 30.00 | fee 1229804 rate 70.61 | fee 1244702 ra
 
 $ npm run mainnet:verify
 no deployments/mainnet.json: the vault isn't on mainnet yet
+~~~
+
+### E-039 output
+~~~text
+contracts/mandate-vault-v5.clar, inside allocate-closed:
+234:    (asserts! (<= amount (get max-notional m)) ERR_TOO_LARGE)
+250:      (asserts! (<= (+ day-notl amount) (get max-daily-notional m)) ERR_DAILY)
+277:                  day-start: day-start, day-notional: (+ day-notl amount),
 ~~~

@@ -44,6 +44,8 @@ The vault's principal in each asset, across all owners, can't exceed that asset'
 
 Windows and days roll forward on the first call after they lapse. **`grant` resets every counter**, including the cumulative slippage, so re-granting gives a delegate a fresh budget.
 
+**Notional limits count raw units of whichever asset moves.** The per-move cap applies to the amount moved, and the day's total adds every allocation's amount, whatever its asset. A mandate whose delegate moves assets with different decimals, such as sBTC (8) and USDCx (6), applies one number to very different values and mixes them in the daily total (R-016 in `docs/REVIEW.md`). An owner who wants limits in each asset's own units grants one delegate per asset, each with its own mandate. The slippage limits are in basis points and the rate window counts moves, so neither depends on units.
+
 ## 3. Authorization flow
 
 ### Who can call what
