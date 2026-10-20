@@ -258,7 +258,7 @@ What the review found, from this model and the suites that test it, is logged in
 - **No admin, pause or upgrade.** A new version is a new contract.
 - **No per-delegate venue lists.** An owner's lists apply to all of that owner's delegates.
 - **No native STX**, which would need a `with-stx` allowance.
-- **No swaps on DEXs** (D-002).
+- **No swaps on DEXs** (D-026). A swap converts one asset into another, with price risk the policy model doesn't yet bound. Bitflow's pools would accept the vault: D-002's reason, that they refuse contracts, was wrong (E-040).
 - **No per-vault AUM cap yet.** It comes before mainnet, in M2.
 
 ## Adversarial suite

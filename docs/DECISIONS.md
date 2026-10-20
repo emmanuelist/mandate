@@ -163,3 +163,10 @@ D-001 to D-008 were written on 2026-10-13, several from earlier work. Each carri
 **Alternatives:** Clarinet's deployment plans, which the probe used, and which regenerate to include every contract in the manifest unless trimmed by hand (`MAINNET-RUNBOOK.md`'s earlier version); the low estimate, which risks a long wait at a time the market moves; a fixed fee, which ignores the market either way.
 **Consequences:** the deployment costs about 3.64 STX at 2026-10-14's medium estimates. A spike above the ceiling stops the run, and a run that stops resumes from its record.
 **Evidence:** E-038.
+
+## D-026 · Bitflow's pools pay contracts; the vault still allocates only to lending venues · 2026-10-20 · supersedes D-002's reason
+**Context:** D-002 dropped trading on Bitflow because its pools refused a contract as recipient (E-003). That was wrong. The pools' guard, `(asserts! (is-standard recipient) ...)`, is a network check that any mainnet principal passes, contracts included. E-003's test ran on a mainnet fork where the simulator deploys contracts from a testnet-format address, which fails that check. On mainnet, Bitflow's pools have paid contracts, and on a fork the same probe swaps when deployed from a mainnet-format address (E-040).
+**Decision:** the vault keeps allocating only to lending venues, Zest and Granite, for M2. The reason is now the right one: a swap converts one asset into another, and the policy model measures a fill against the venue's own quote but has no oracle to bound its price, while a lending venue returns the asset it took. Bitflow is a candidate venue for a later version, once the policy can bound a swap's price.
+**Alternatives:** returning to swaps now, which would need a new vault version and a review of price risk in the middle of M2.
+**Consequences:** `BITFLOW-REPORT.md`, the README, PLAN's cut list and SPEC's non-goals are corrected, the regression test shows both addresses, CONTEXT records the fork trap, and `docs/REVIEW.md` logs the error as R-017. A fork test of a mainnet contract that checks `is-standard` deploys from a mainnet-format address.
+**Evidence:** E-040.

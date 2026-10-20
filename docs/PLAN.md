@@ -9,7 +9,7 @@ Milestones and their exit criteria. GitHub milestones mirror this table, with id
 
 ## Cut list
 Deliberately not being built. Each entry links the decision that cut it.
-- Trading on Bitflow's pools: they refuse a contract as recipient (D-002).
+- Swaps on decentralized exchanges, Bitflow included: a swap brings price risk the policy model doesn't yet bound (D-026, which corrects D-002's reason: Bitflow's pools do pay contracts).
 - Exit criteria that wait on another team (D-003).
 - An owner-facing app as a committed deliverable; M3 commits to the public ledger page (D-007).
 - An external audit at this stage; the AUM cap bounds exposure until one is done (D-008).

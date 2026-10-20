@@ -1,65 +1,61 @@
-# Bitflow pools reject contract principals as swap recipients
+# Bitflow's pools pay contracts on mainnet
 
-Sharing a composability limitation found while building a non-custodial vault on Stacks.
-Not a security issue — no funds are at risk. It does mean contracts cannot integrate the
-pools, which may not be intended.
+**Correction, 2026-10-20.** An earlier version of this report said that Bitflow's pools
+reject contract principals as swap recipients. That was wrong. The guard it described
+is a network check, and the test behind it ran on a mainnet fork that deploys contracts
+from a testnet-format address. This version replaces it (D-026, E-040, #58).
 
-## What happens
+## The guard
 
-`pool-transfer` asserts the recipient is a standard principal:
+Bitflow's pools assert, before paying out:
 
-    ;; xyk-pool-sbtc-stx-v-1-1, pool-transfer
+    ;; xyk-pool-sbtc-stx-v-1-1, pool-transfer, line 242
     (asserts! (is-standard recipient) ERR_INVALID_PRINCIPAL)  ;; u3003
 
-`xyk-core-v-1-2.swap-x-for-y` calls `pool-transfer ... caller`, where `caller` is
-`tx-sender`. A contract swapping its own balance uses `as-contract`, which makes
-`tx-sender` the contract — so `is-standard` is false and the swap reverts with `u3003`.
+`is-standard` tests whether a principal belongs to the current network. It is true for
+any `SP` or `SM` principal on mainnet, contracts included. Clarity's function reference
+gives the example `(is-standard 'SP3X6QWWETNBZWGBK6DRGTR1KX50S74D3433WDGJY.foo)`, which
+returns true on mainnet. A contract deployed on mainnet therefore passes the check, so it
+can receive a swap's output. `pool-mint` and `pool-burn` apply the same check to the
+liquidity provider, so the same reasoning applies to liquidity provision, which has not
+been tested here.
 
-The contract can pay *into* a swap but can never receive the output.
+The same guard appears in the xyk, stableswap and DLMM pools, including the DLMM pools
+deployed between August and October 2026 (`pool-transfer` at line 534 in each).
 
-## Reproduction
+## Why it looked like a refusal
 
-Clarinet 3.21 with `[repl.remote_data]` forking mainnet. A minimal vault holding real
-sBTC calls `swap-x-for-y` through `as-contract` against `xyk-pool-sbtc-stx-v-1-1`:
+Clarinet's simulator deploys a project's contracts from
+`ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM`, a testnet-format address, even when
+`[repl.remote_data]` forks mainnet. On a mainnet fork, `is-standard` is false for those
+contracts, so the pool refuses them with `u3003`. The earlier report read that refusal
+as Bitflow refusing contracts.
 
-    deposit real sBTC : (ok true)
-    swap via contract : (err u3003)   ;; ERR_INVALID_PRINCIPAL
+## What mainnet and the fork show
 
-## Scope
+On mainnet, `dlmm-pool-sbtc-usdcx-v-2-bps-10` has paid USDCx to contracts in successful
+transactions, among them a keeper contract built on Bitflow's own keeper product:
 
-Same guard present in:
+| Block | Paid to | Transaction |
+| --- | --- | --- |
+| 8,816,074 | `SP3R9DNHRSBPT42JX98J92ZJHASWSBXT5ZW8X4XCK.keeper-5-lwdf9jx3h-v-1-1` | `0xc8638b84eb6b68366574cd890ef8bcae66d16a90567d5992f0b46f4aa9c615f1` |
+| 8,816,082 | the same keeper contract | `0x3e0f1d713ecd2c5afedbdc1fed0be5e51bd36abb221347187a37f0073f75e297` |
+| 8,816,527 | `SP3EWCDA3V8HCP64CSETSNYXZ25WC4AJ95EC0ZEST.dlmm-adapter` | `0x8b95951fe3b2c820b12824b285c60985ef208ce4eec8482d37d1481e1cc710da` |
+| 8,822,190 | `SP2H674PRTZV6YW56K0FMR7GDGZE4ZC5HMYZ3CDEV.nana` | `0x9913f5f29709cb28a22733627da6dd074ccf986a25b47a869e6f3d3e120b8409` |
 
-- `xyk-pool-sbtc-stx-v-1-1` — `pool-transfer` line 242
-- `stableswap-pool-sbtc-pbtc-v-1-1` — `pool-transfer`
-- `stableswap-pool-aeusdc-usdh-v-1-2` — `pool-transfer`
-- `dlmm-pool-stx-sbtc-v-3-bps-15` — `pool-transfer` line 534
-- `dlmm-pool-sbtc-usdcx-v-2-bps-10` — `pool-transfer` line 534
+On a mainnet fork, `tests/bitflow-fork.test.ts` deploys the same probe contract twice and
+swaps 100,000 sats of its own sBTC for STX through `xyk-core-v-1-2`:
 
-The DLMM line is worth calling out separately because it is the newest product
-and routes through a different core. `dlmm-swap-router-v-1-1` has no
-`is-standard` assertion anywhere, and `dlmm-core-v-1-1` has four, all admin-side
-(`set-swap-fee-exemption`, `set-variable-fees-manager`, `set-fee-address`,
-`create-pool`). But `dlmm-core-v-1-1.swap-x-for-y` binds `(caller tx-sender)` and
-calls `pool-transfer ... caller`, and the DLMM pool asserts `is-standard` on the
-recipient exactly as the xyk pool does. Same shape, one layer down, in all three
-product lines.
+| Deployed from | `is-standard` on the probe | Swap |
+| --- | --- | --- |
+| `ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM`, the simulator's address | false | `(err u3003)`, nothing paid |
+| `SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R`, the same key's mainnet form | true | `(ok u192131720)`: 192.13 STX paid to the probe |
 
-`pool-mint` and `pool-burn` carry it too, so LP tokens cannot be minted to a contract:
-contract-held liquidity provision is also closed.
+## What this means for Mandate
 
-`xyk-core-v-1-2` itself has no such guard — its only `is-standard` assertions are in
-`set-fee-address` and `create-pool`, on the fee address and token contracts. Reading the
-core alone suggests contracts are supported; the restriction is one contract deeper.
-
-## Why it matters
-
-Vaults, aggregators, treasury contracts, and autonomous agents holding their own balances
-cannot route through Bitflow pools. For comparison, Zest `v0-vault-sbtc` and Granite
-`liquidity-provider-v1` both bind `contract-caller` as the account and place no
-`is-standard` guard on recipients, so contracts are first-class there.
-
-If the guard is deliberate, it would help integrators to have it documented. If it is
-inherited boilerplate, relaxing it on the recipient in a future pool version would open
-Bitflow to contract-based integrations.
-
-Happy to share the test harness.
+Bitflow is open to contracts, including vaults and agents that hold their own balances.
+Mandate's vault still allocates only to lending venues for now (D-026). A swap converts
+one asset into another, which brings price risk that the policy model does not yet
+bound, and adding swaps would need a new version of the vault. To test a mainnet
+contract's behaviour on a fork, deploy it from a mainnet-format address
+(`docs/CONTEXT.md`).

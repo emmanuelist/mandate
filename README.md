@@ -76,22 +76,22 @@ the threat model, is in [docs/SPEC.md](docs/SPEC.md).
 ## Venue compatibility
 
 Each venue was verified against its deployed mainnet contracts on a Clarinet
-remote-data fork.
+remote-data fork, and Bitflow also against its mainnet transactions.
 
 | Venue | Accepts a contract principal | Notes |
 | --- | --- | --- |
 | Zest | Yes | Binds `contract-caller`; applies no `is-standard` check to recipients |
 | Granite | Yes, through an adapter | Its USDCx lending pool burns LP tokens from the caller on redeem, so `granite-venue` holds them and mints its own shares (D-020) |
-| Bitflow | No | `pool-transfer` asserts `(is-standard recipient)` |
+| Bitflow | Yes | `pool-transfer` asserts `(is-standard recipient)`, a network check that any mainnet principal passes, contracts included (D-026) |
 
-Bitflow's pools cannot pay a contract principal. The same check appears in the xyk
-pool, both stableswap pools and the DLMM pools, and in `pool-mint` and `pool-burn`,
-which also rules out liquidity provision by a contract. Deployed Clarity contracts
-are immutable, so this restriction is permanent.
-[BITFLOW-REPORT.md](BITFLOW-REPORT.md) documents the finding in full.
+An earlier version of this table listed Bitflow as refusing contracts. That was
+wrong. Bitflow's guard checks only that a recipient belongs to the current network,
+and the test behind the claim ran on a fork that deploys contracts from a
+testnet-format address. On mainnet, Bitflow's pools pay contracts.
+[BITFLOW-REPORT.md](BITFLOW-REPORT.md) sets out the correction and its evidence.
 
-This finding is the reason Mandate allocates to lending venues rather than trading
-on a decentralized exchange.
+Mandate allocates to lending venues by design. A swap converts one asset into
+another, which brings price risk that the policy model does not yet bound (D-026).
 
 ## Deployments
 
@@ -301,7 +301,7 @@ To deploy an independent copy and run the same lifecycle:
 | [docs/EVIDENCE.md](docs/EVIDENCE.md) | The evidence behind each claim: transactions, CI runs and captured output |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Design decisions and their rationale |
 | [docs/CONTEXT.md](docs/CONTEXT.md) | Verified facts about the contracts and tools Mandate depends on, including known pitfalls |
-| [BITFLOW-REPORT.md](BITFLOW-REPORT.md) | Analysis of why Bitflow's pools cannot pay a contract principal |
+| [BITFLOW-REPORT.md](BITFLOW-REPORT.md) | A correction: why Bitflow's pools appeared to refuse contracts on a fork, and the evidence that they pay contracts on mainnet |
 | [MAINNET-RUNBOOK.md](MAINNET-RUNBOOK.md) | The procedure for deploying the vault to mainnet, with its costs, and the record of the earlier mainnet probe |
 
 ## License

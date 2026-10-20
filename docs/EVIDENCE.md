@@ -42,6 +42,7 @@ Append-only proof log. Every claim in the README, the specification or a milesto
 | E-037 | 2026-10-14 | v5 is rehearsed on testnet (#52). `npm run testnet` deployed v5 with the repo's source ([block 725,660](https://explorer.hiro.so/txid/0x8d97cca7121c7d5ec43fae56db34efa636fe9a6971b7488b390060026bb635b2?chain=testnet)), set testnet sBTC's cap and read it back as `u1000000`, and ran the lifecycle on v5: seven transactions, each `(ok ...)`, with the books reconciling exactly. A first attempt at the lifecycle succeeded step by step but failed to reconcile, because the Hiro Platform faucet's address sent the owner 10,000 sats mid-run, at block 725,677; the run now reconciles the owner's wallet net of transfers from outside it. Under a mandate on v5, the reference delegate allocated 20,000, unwound 10,000, allocated 20,000 and unwound 30,000, signing alone in deny mode. It then attempted four calls the mandate forbids, each refused with no events: 20,001 sats against a per-move cap of 20,000 (`u102`), a venue the owner never listed (`u107`), a withdrawal (`u105`), and an allocation after the owner revoked (`u100`). The owner revoked and withdrew all 40,000 sats, and withdrew the 40,000 left in v4, so no testnet vault holds funds. `npm run testnet:verify`: 25 of 25 | `npm run testnet`, `npm run testnet:mandate`, `npm run delegate -- testnet 7500,2500,7500,0` and `attempt <kind>`, `npm run testnet:verify` (output below) | `e749256` |
 | E-038 | 2026-10-14 | The mainnet deployment is ready to run and costs about 3.64 STX at the medium fee estimate (#34). `npm run mainnet:deploy` read no key and sent nothing: it found none of the four contracts on mainnet, estimated each deploy at about 0.61 STX at the medium (0.52 low, 1.00 high), budgeted the two caps at a deploy's price since a vault not yet deployed has no estimate, and found the deployer holding 188.34 STX. Its first version reported a fallback as an estimate, since `fetchFeeEstimate` returns a number, not the three estimates; the script now reads all three. `npm run mainnet:verify` reports that nothing is deployed yet | `npm run mainnet:deploy`; `npm run mainnet:verify` (output below) | `b109eb1` |
 | E-039 | 2026-10-15 | v5's notional limits count raw units of whichever asset moves (#56): `allocate` checks the amount against `max-notional` and the day's total against `max-daily-notional`, and adds the amount to the day's total, with no reference to the asset. Logged as R-016 | `contracts/mandate-vault-v5.clar`, lines 234, 250 and 277 (output below) | `363afa7` |
+| E-040 | 2026-10-20 | E-003 was wrong: Bitflow's pools pay contracts on mainnet (#58). Their guard is `is-standard`, which Clarity's function reference defines as a network check that contracts of the current network pass. On mainnet, `dlmm-pool-sbtc-usdcx-v-2-bps-10` paid USDCx to contracts in four successful transactions (blocks 8,816,074, 8,816,082, 8,816,527 and 8,822,190), two of them to a keeper contract built on Bitflow's keeper product. On a mainnet fork, `tests/bitflow-fork.test.ts` deploys the same probe twice and swaps 100,000 sats for STX through `xyk-pool-sbtc-stx-v-1-1`: from the simulator's `ST1PQ...` address `is-standard` is false and the swap fails with `u3003`; from the same key's `SP1PQ...` form it is true and the probe receives 192,131,720 µSTX. E-003's test deployed from the `ST` address | Clarity's function reference for `is-standard`; the four transactions; `tests/bitflow-fork.test.ts` (output below) | `c072b89` |
 
 ### E-001 output
 ~~~text
@@ -844,4 +845,26 @@ contracts/mandate-vault-v5.clar, inside allocate-closed:
 234:    (asserts! (<= amount (get max-notional m)) ERR_TOO_LARGE)
 250:      (asserts! (<= (+ day-notl amount) (get max-daily-notional m)) ERR_DAILY)
 277:                  day-start: day-start, day-notional: (+ day-notl amount),
+~~~
+
+### E-040 output
+~~~text
+# Clarity's function reference, is-standard
+(is-standard 'SP3X6QWWETNBZWGBK6DRGTR1KX50S74D3433WDGJY.foo) ;; returns true on mainnet and false on testnet
+(is-standard 'STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6.foo) ;; returns true on testnet and false on mainnet
+
+# mainnet: successful payouts from dlmm-pool-sbtc-usdcx-v-2-bps-10 to contracts, among its last 50 transactions
+8816074 0xc8638b84eb6b68366574cd890ef8bcae66d16a90567d5992f0b46f4aa9c615f1 -> SP3R9DNHRSBPT42JX98J92ZJHASWSBXT5ZW8X4XCK.keeper-5-lwdf9jx3h-v-1-1  126566 usdcx-token
+8816082 0x3e0f1d713ecd2c5afedbdc1fed0be5e51bd36abb221347187a37f0073f75e297 -> SP3R9DNHRSBPT42JX98J92ZJHASWSBXT5ZW8X4XCK.keeper-5-lwdf9jx3h-v-1-1  126566 usdcx-token
+8816527 0x8b95951fe3b2c820b12824b285c60985ef208ce4eec8482d37d1481e1cc710da -> SP3EWCDA3V8HCP64CSETSNYXZ25WC4AJ95EC0ZEST.dlmm-adapter        250950 usdcx-token
+8822190 0x9913f5f29709cb28a22733627da6dd074ccf986a25b47a869e6f3d3e120b8409 -> SP2H674PRTZV6YW56K0FMR7GDGZE4ZC5HMYZ3CDEV.nana                 44734 usdcx-token
+# the keeper contract uses SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.keeper-action-trait-v-1-2 and keeper-5-helper-v-1-1;
+# it was deployed by SP3R9DNHRSBPT42JX98J92ZJHASWSBXT5ZW8X4XCK at block 8,815,865
+
+$ npx vitest run tests/bitflow-fork.test.ts
+SP1PQ... probe: is-standard true | swap (ok u192131720) | paid [{"to":"SP1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRCBGD7R.bitflow-probe","amount":"192131720"}]
+  ST1PQ... probe: is-standard false | swap (err u3003) | paid []
+ ✓ tests/bitflow-fork.test.ts > Bitflow pays a contract; the fork's testnet-format deployer fails its network check > bitflow: a contract deployed from a mainnet address receives a swap's output 16996ms
+ ✓ tests/bitflow-fork.test.ts > Bitflow pays a contract; the fork's testnet-format deployer fails its network check > bitflow: the same contract deployed from the fork's testnet-format address is refused with u3003 13840ms
+      Tests  2 passed (2)
 ~~~

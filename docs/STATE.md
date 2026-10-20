@@ -1,5 +1,5 @@
 # State
-_Last verified: 2026-10-14 at `b109eb1`_
+_Last verified: 2026-10-20 at `c072b89`_
 
 **Thesis:** an owner can put someone else in charge of their sBTC without handing over the keys. The delegate moves funds between allowlisted venues and nothing else, can never withdraw, and the owner can revoke in any block.
 **Milestone:** M2 · Mainnet Launch + Adversarial Suite (due 2026-12-05, 52 days left). M1's exit criteria are met (E-014, E-022, E-024); D-017 awaits sign-off.
@@ -33,7 +33,7 @@ _Last verified: 2026-10-14 at `b109eb1`_
 | A contract can deposit sBTC into Zest and redeem it | the probe's five transactions, fees and final balances re-read from the mainnet API; fork tests | E-002, E-004, E-022 |
 | Granite accepts a contract's sBTC as collateral | fork test | E-005 |
 | Jing accepts a contract as maker: deposit and cancel | fork test pinned at block 9,036,500, from a fresh clone and in CI | E-006, E-022 |
-| Bitflow refuses a contract as recipient | deployed source of five pools; fork test | E-003 |
+| Bitflow's pools pay contracts on mainnet. E-003's refusal was the fork's testnet-format deployer failing their network check | four mainnet payouts to contracts; a fork test from both addresses | E-040, D-026 |
 | CI: identity check and both fork suites on every pull request, each fork suite up to three attempts a minute apart | green on GitHub's runners; on #23 a failed attempt waited its minute and the retry passed | E-008, E-015, E-020, E-021 |
 | The protocol specification names every test in the vault's suites, and CI fails if one goes missing | `node scripts/spec-crosscheck.mjs`: 125 of 125 | E-014, E-016, E-035 |
 | `grant` refuses parameters that switch a limit off or abort later | 5 tests | E-016 |
