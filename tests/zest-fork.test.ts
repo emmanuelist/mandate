@@ -15,7 +15,8 @@ describe("Zest against forked mainnet -- can a CONTRACT be the depositor?", () =
     const r = simnet.callPublicFn("zest-probe", "allocate",
       [Cl.uint(AMT), Cl.uint(1)], WHALE);
     console.log("  contract deposits to Zest :", Cl.prettyPrint(r.result));
-    // Bitflow returned u3003 here. Zest should mint shares to the contract.
+    // Bitflow returned u3003 here, but only because this fork deploys contracts from a
+    // testnet-format address (E-040). Zest should mint shares to the contract.
     expect(Cl.prettyPrint(r.result)).toMatch(/^\(ok u\d+\)$/);
 
     // the round trip matters: an owner must be able to get out

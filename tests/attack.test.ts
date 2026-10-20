@@ -60,7 +60,9 @@ describe("DESIGN HOLE: the agent chooses its own slippage floor", () => {
       [pool(), xTok(), yTok(), Cl.uint(1000), Cl.uint(1)], agentX);
     const repr = Cl.prettyPrint(r.result);
     console.log("  min-dy=1 (accept ~any price):", repr);
-    // the vault raises no objection -- it fails downstream at Bitflow, not at policy
+    // the vault raises no objection. On this fork the swap then fails at Bitflow's
+    // network check, because the simulator's address is testnet-format; on mainnet it
+    // would go through at whatever price the agent accepts (E-040)
     expect(["(err u100)","(err u101)","(err u102)","(err u103)"]).not.toContain(repr);
   });
 });
